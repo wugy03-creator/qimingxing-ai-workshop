@@ -104,14 +104,21 @@ input{font-family:inherit;outline:none;border:none}
     }, 550);
   }
 
+  function showRetry(msg){
+    sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">' + msg + '<br><button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border-radius:10px;background:#C8622B;color:#fff;font-size:14px;">重新连接</button></div>';
+  }
+
   function initSDK(nickname){
     if(typeof CozeWebSDK === 'undefined'){
-      sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">镜子好像蒙了一层雾…<br>请检查网络后重新打开<br><button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border-radius:10px;background:#C8622B;color:#fff;font-size:14px;">重新连接</button></div>';
+      showRetry('镜子好像蒙了一层雾…<br>请检查网络后重新打开');
       return;
     }
 
+    sdkRoot.innerHTML = '<div id="miraLoading" style="display:flex;align-items:center;justify-content:center;height:100%;color:#B8A99A;font-size:14px;">镜子正在擦亮…</div>';
+
+    var client = null;
     try{
-      new CozeWebSDK.WebChatClient({
+      client = new CozeWebSDK.WebChatClient({
         config: {
           botId: BOT_ID,
           isIframe: false
@@ -136,14 +143,29 @@ input{font-family:inherit;outline:none;border:none}
           chatBot: {
             title: 'Mira',
             uploadable: false,
-            el: sdkRoot
+            el: sdkRoot,
+            onShow: function(){
+              var l = document.getElementById('miraLoading');
+              if(l) l.style.display = 'none';
+            }
           },
           footer: { isShow: false }
         }
       });
+      if(client && typeof client.showChatBot === 'function'){
+        client.showChatBot();
+      }
     }catch(e){
-      sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">初始化失败，请刷新重试</div>';
+      showRetry('初始化失败，请刷新重试');
+      return;
     }
+
+    setTimeout(function(){
+      var l = document.getElementById('miraLoading');
+      if(l && l.style.display !== 'none' && sdkRoot.querySelectorAll('iframe').length === 0){
+        showRetry('镜子加载得有点慢…<br>可能是网络问题，请重试');
+      }
+    }, 12000);
   }
 
   var savedName = localStorage.getItem('mira_name');
