@@ -326,28 +326,158 @@ input{font-family:inherit;outline:none;border:none}
     sdkError.classList.add('show');
   }
 
+  // Deep search through shadow DOM
+  function deepQuerySelector(root, selector){
+    if(!root) return null;
+    var result = root.querySelector(selector);
+    if(result) return result;
+    var elements = root.querySelectorAll('*');
+    for(var i=0; i<elements.length; i++){
+      if(elements[i].shadowRoot){
+        result = deepQuerySelector(elements[i].shadowRoot, selector);
+        if(result) return result;
+      }
+    }
+    return null;
+  }
+
+  function deepQuerySelectorAll(root, selector){
+    var results = [];
+    if(!root) return results;
+    var found = root.querySelectorAll(selector);
+    for(var i=0; i<found.length; i++) results.push(found[i]);
+    var elements = root.querySelectorAll('*');
+    for(var j=0; j<elements.length; j++){
+      if(elements[j].shadowRoot){
+        results = results.concat(deepQuerySelectorAll(elements[j].shadowRoot, selector));
+      }
+    }
+    return results;
+  }
+
+  function dumpSDKInfo(){
+    console.log('[Mira] === SDK DOM Debug ===');
+    // Check sdkClient methods
+    if(sdkClient){
+      var methods = [];
+      for(var k in sdkClient){
+        if(typeof sdkClient[k] === 'function') methods.push(k);
+      }
+      console.log('[Mira] sdkClient methods:', methods.join(', '));
+    }
+    // Search for input elements in both light DOM and shadow DOM
+    var editables = deepQuerySelectorAll(sdkRoot, '[contenteditable="true"]');
+    var textareas = deepQuerySelectorAll(sdkRoot, 'textarea');
+    console.log('[Mira] contenteditable found:', editables.length, '| textarea found:', textareas.length);
+    if(editables.length > 0) console.log('[Mira] editable tag:', editables[0].tagName, 'class:', editables[0].className);
+    // Search for buttons
+    var buttons = deepQuerySelectorAll(sdkRoot, 'button');
+    var btnInfo = [];
+    for(var b=0; b<buttons.length; b++){
+      btnInfo.push(buttons[b].className.substring(0,60) + (buttons[b].disabled?'[disabled]':''));
+    }
+    console.log('[Mira] buttons (' + buttons.length + '):', btnInfo.join(' | '));
+    // Check if SDK uses shadow DOM
+    var hostElements = [];
+    var allEls = sdkRoot.querySelectorAll('*');
+    for(var e=0; e<allEls.length; e++){
+      if(allEls[e].shadowRoot) hostElements.push(allEls[e].tagName + '.' + allEls[e].className.substring(0,40));
+    }
+    if(hostElements.length > 0) console.log('[Mira] shadow DOM hosts:', hostElements.join(' | '));
+    console.log('[Mira] sdkRoot children:', sdkRoot.children.length);
+    for(var c=0; c<sdkRoot.children.length; c++){
+      console.log('[Mira] child', c, ':', sdkRoot.children[c].tagName, sdkRoot.children[c].className.substring(0,60), 'offsetHeight:', sdkRoot.children[c].offsetHeight);
+    }
+  }
+
   // Send a message through the SDK by interacting with its DOM
   function sendMessage(text){
     if(!text) return;
-    var input = sdkRoot.querySelector('[contenteditable="true"]') || sdkRoot.querySelector('textarea');
-    if(!input){ console.warn('[Mira] input not found'); return; }
+    console.log('[Mira] sendMessage called:', text.substring(0,30));
 
-    input.focus();
-    if(input.tagName === 'TEXTAREA'){
-      input.value = text;
-      input.dispatchEvent(new Event('input', {bubbles: true}));
-    } else {
-      input.textContent = text;
-      input.dispatchEvent(new InputEvent('input', {bubbles: true, data: text, inputType: 'insertText'}));
+    // First try SDK built-in method if available
+    if(sdkClient){
+      if(typeof sdkClient.sendMessage === 'function'){
+        console.log('[Mira] using sdkClient.sendMessage()');
+        sdkClient.sendMessage(text);
+        return;
+      }
+      if(typeof sdkClient.chat === 'function'){
+        console.log('[Mira] using sdkClient.chat()');
+        sdkClient.chat(text);
+        return;
+      }
     }
 
-    // Click send button after a short delay to let React register the input
+    // Find input - search both light DOM and shadow DOM
+    var input = deepQuerySelector(sdkRoot, '[contenteditable="true"]') ||
+                deepQuerySelector(sdkRoot, 'textarea');
+    console.log('[Mira] input found:', input ? input.tagName + '.' + input.className.substring(0,40) : 'NULL');
+    if(!input){
+      dumpSDKInfo();
+      return;
+    }
+
+    input.focus();
+
+    if(input.tagName === 'TEXTAREA'){
+      // Use native setter for React
+      var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeSetter.call(input, text);
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    } else {
+      // contenteditable div: use execCommand (most reliable for React)
+      try {
+        // Select all existing content and replace
+        input.focus();
+        var range = document.createRange();
+        range.selectNodeContents(input);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('insertText', false, text);
+        console.log('[Mira] execCommand insertText done');
+      } catch(err) {
+        console.warn('[Mira] execCommand failed, trying fallback:', err);
+        // Fallback: set textContent and dispatch events
+        input.textContent = text;
+        input.dispatchEvent(new InputEvent('input', {bubbles: true, cancelable: true, data: text, inputType: 'insertText'}));
+      }
+    }
+
+    // Find and click send button
     setTimeout(function(){
-      var sendBtn = sdkRoot.querySelector('[class*="send-btn"]:not([disabled])') ||
-                    sdkRoot.querySelector('button[class*="send"]:not([disabled])') ||
-                    sdkRoot.querySelector('button[class*="send"]');
-      if(sendBtn){ sendBtn.click(); }
-    }, 150);
+      var sendBtn = null;
+      // Try various selectors, search through shadow DOM too
+      var sendSelectors = [
+        'button[class*="send-btn"]:not([disabled])',
+        'button[class*="sendButton"]:not([disabled])',
+        'button[class*="send"]:not([disabled])',
+        'div[class*="send-btn"]:not([disabled])',
+        'div[role="button"][class*="send"]:not([disabled])'
+      ];
+      for(var s=0; s<sendSelectors.length; s++){
+        sendBtn = deepQuerySelector(sdkRoot, sendSelectors[s]);
+        if(sendBtn) break;
+      }
+      // Fallback: any enabled button with send in class
+      if(!sendBtn){
+        var allBtns = deepQuerySelectorAll(sdkRoot, 'button, div[role="button"]');
+        for(var i=0; i<allBtns.length; i++){
+          if(!allBtns[i].disabled && /send|发送/i.test(allBtns[i].className)){
+            sendBtn = allBtns[i];
+            break;
+          }
+        }
+      }
+      console.log('[Mira] send button found:', sendBtn ? sendBtn.tagName + '.' + sendBtn.className.substring(0,40) : 'NULL');
+      if(sendBtn){
+        sendBtn.click();
+        console.log('[Mira] send button clicked');
+      } else {
+        dumpSDKInfo();
+      }
+    }, 250);
   }
 
   // Switch active scene
@@ -429,6 +559,9 @@ input{font-family:inherit;outline:none;border:none}
       if(typeof sdkClient.showChatBot === 'function'){
         sdkClient.showChatBot();
       }
+
+      // Debug: dump SDK info after init
+      setTimeout(function(){ dumpSDKInfo(); }, 2000);
 
       // Safety timeout
       setTimeout(hideLoading, 1500);
