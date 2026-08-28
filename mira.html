@@ -248,16 +248,11 @@ input{font-family:inherit;outline:none;border:none}
   var startBtn = document.getElementById('startBtn');
   var sdkRoot = document.getElementById('sdk-root');
   var initLoading = document.getElementById('initLoading');
-  var sdkInited = false;
   var sdkClient = null;
 
   function initSDK(nickname){
-    if(sdkInited) return;
-    sdkInited = true;
-
     if(typeof CozeWebSDK === 'undefined'){
-      initLoading.style.display = 'none';
-      document.getElementById('sdk-error').classList.add('show');
+      initLoading.innerHTML = 'SDK 加载失败，请刷新重试';
       return;
     }
 
@@ -267,53 +262,39 @@ input{font-family:inherit;outline:none;border:none}
     try{
       sdkClient = new CozeWebSDK.WebChatClient({
         config: {
-          type: 'bot',
-          bot_id: BOT_ID,
+          botId: BOT_ID,
           isIframe: false
         },
         auth: {
           type: 'token',
           token: PAT,
-          onRefreshToken: function(){ return PAT; }
+          onRefreshToken: async function(){ return PAT; }
         },
         userInfo: {
           id: uid,
-          nickname: nickname || '朋友',
-          url: avatarUrl
+          nickname: nickname || '朋友'
         },
         ui: {
-          base: {
-            icon: avatarUrl,
-            layout: 'mobile',
-            lang: 'zh-CN',
-            zIndex: 1
-          },
+          asstBtn: { isNeed: false },
           chatBot: {
             title: 'Mira',
             uploadable: false,
             el: sdkRoot
           },
-          asstBtn: { isNeed: false },
-          footer: { isShow: false },
-          header: { isShow: false, isNeedClose: false }
+          footer: { isShow: false }
         }
       });
 
-      // Proactively show the chat bot since we hid the floating button
+      // 安全超时：3秒后强制隐藏 loading，无论 SDK 是否渲染成功
       setTimeout(function(){
-        try{
-          if(sdkClient && typeof sdkClient.showChatBot === 'function'){
-            sdkClient.showChatBot();
-          }
-        }catch(e){ console.warn('showChatBot:', e); }
-        // Hide loading after a moment
-        setTimeout(function(){ initLoading.style.display = 'none'; }, 800);
-      }, 500);
+        if(initLoading.style.display !== 'none'){
+          initLoading.style.display = 'none';
+        }
+      }, 3000);
 
     }catch(e){
       console.error('SDK init error:', e);
-      initLoading.style.display = 'none';
-      document.getElementById('sdk-error').classList.add('show');
+      initLoading.innerHTML = '初始化失败，请刷新重试';
     }
   }
 
@@ -339,13 +320,6 @@ input{font-family:inherit;outline:none;border:none}
   nameInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); start(); }
   });
-
-  // SDK load timeout
-  setTimeout(function(){
-    if(sdkInited && initLoading.style.display !== 'none'){
-      // Give it more time, don't show error yet
-    }
-  }, 15000);
 
 })();
 </script>
