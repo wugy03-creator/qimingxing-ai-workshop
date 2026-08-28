@@ -6,12 +6,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#FBF6EC">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Mira · 照见</title>
 <style>
 :root{
-  --paper:#FBF6EC;--paper-2:#F5EEE0;--ink:#2C2418;--ink-2:#6B5D4F;--ink-3:#B8A99A;
-  --amber:#C8622B;--amber-2:#D4783F;--amber-light:#E8A87C;--amber-soft:#F5D5B8;
-  --cream:#FFFCF5;--border:rgba(44,36,24,.08);--shadow:rgba(44,36,24,.06);
+  --paper:#FBF6EC;--ink:#2C2418;--ink-2:#6B5D4F;--ink-3:#B8A99A;
+  --amber:#C8622B;--amber-2:#D4783F;--amber-light:#E8A87C;--cream:#FFFCF5;--border:rgba(44,36,24,.08);
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue','Microsoft YaHei',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.6}
@@ -38,197 +39,10 @@ input{font-family:inherit;outline:none;border:none}
 .btn-start:disabled{opacity:.5;box-shadow:none}
 .opening-foot{position:absolute;bottom:max(28px,env(safe-area-inset-bottom));font-size:11px;color:var(--ink-3);letter-spacing:1.5px}
 
-/* ========== Chat App ========== */
-#app{display:none;flex-direction:column;height:100%;height:100dvh;background:var(--paper)}
-#app.show{display:flex}
-.topbar{flex-shrink:0;display:flex;align-items:center;padding:12px 18px;padding-top:max(12px,env(safe-area-inset-top));background:rgba(251,246,236,.95);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid var(--border);z-index:10;position:relative}
-.tb-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;margin-right:11px;background:radial-gradient(circle at 35% 28%,#FFF8ED,#F2D8B0 40%,var(--amber) 100%);box-shadow:0 2px 8px rgba(200,98,43,.18);position:relative}
-.tb-avatar::after{content:'';position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#7CB342;border:2px solid var(--paper)}
-.tb-info h2{font-family:'Songti SC','STSong',serif;font-size:16px;font-weight:500;line-height:1.2}
-.tb-info p{font-size:11px;color:var(--amber);letter-spacing:.5px;margin-top:1px}
-.tb-right{margin-left:auto;display:flex;gap:8px}
-.tb-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-2);transition:background .2s}
-.tb-btn:active{background:var(--paper-2)}
-.tb-btn svg{width:18px;height:18px}
-
-/* ========== Scene Bar ========== */
-
-/* SDK container */
-#sdk-root{flex:1;min-height:0;position:relative;overflow:hidden;width:100%;background:#FBF6EC url('imgs/mira_chat_bg_1.jpg') center center/cover no-repeat}
-#sdk-root::before{content:'';position:absolute;inset:0;background:rgba(251,246,236,.42);z-index:0;pointer-events:none}
-#sdk-root > *{position:relative;z-index:1}
-
-/* ========== SDK DOM Overrides ========== */
-/* Force warm paper background on EVERYTHING inside SDK */
-#sdk-root,
-#sdk-root > div,
-#sdk-root [class*="chat"],
-#sdk-root [class*="Chat"],
-#sdk-root [class*="conversation"],
-#sdk-root [class*="message"],
-#sdk-root [class*="welcome"],
-#sdk-root [class*="empty"],
-#sdk-root [class*="home"],
-#sdk-root [class*="main"],
-#sdk-root [class*="body"],
-#sdk-root [class*="content"],
-#sdk-root [class*="wrapper"],
-#sdk-root [class*="container"],
-#sdk-root [class*="layout"],
-#sdk-root [class*="inner"],
-#sdk-root [class*="scroll"],
-#sdk-root [class*="list"]{
-  background-color:var(--paper)!important;
-  background-image:none!important;
-}
-
-/* Hide SDK internal top navigation / header / title bar */
-#sdk-root [class*="nav-bar"],
-#sdk-root [class*="navbar"],
-#sdk-root [class*="chat-header"],
-#sdk-root [class*="chatHeader"],
-#sdk-root [class*="top-bar"],
-#sdk-root [class*="topbar"],
-#sdk-root [class*="title-bar"],
-#sdk-root [class*="header-bar"],
-#sdk-root > div > div:first-child{
-  display:none!important;
-}
-
-/* Hide SDK floating action button, conversation list toggle, phone icon, mic button */
-#sdk-root [class*="asst-btn"],
-#sdk-root [class*="assistant-btn"],
-#sdk-root [class*="float-btn"],
-#sdk-root [class*="new-chat"],
-#sdk-root [class*="newChat"],
-#sdk-root [class*="menu-btn"],
-#sdk-root [class*="drawer-toggle"],
-#sdk-root [class*="history-btn"],
-#sdk-root [class*="conversation-btn"],
-#sdk-root [class*="phone"],
-#sdk-root [class*="call"],
-#sdk-root [class*="voice-btn"],
-#sdk-root [class*="mic"]{
-  display:none!important;
-}
-
-/* Message row */
-#sdk-root [class*="message-item"],
-#sdk-root [class*="message-row"],
-#sdk-root [class*="msg-item"]{
-  padding:6px 16px!important;background:transparent!important;
-}
-
-/* Assistant bubble */
-#sdk-root [class*="assistant"] [class*="bubble"],
-#sdk-root [class*="assistant"] [class*="content"],
-#sdk-root [class*="bot-message"] [class*="bubble"],
-#sdk-root [class*="left-message"] [class*="bubble"],
-#sdk-root [class*="receive"] [class*="bubble"],
-#sdk-root [class*="receive"] [class*="content"],
-#sdk-root [class*="answer"] [class*="bubble"],
-#sdk-root [class*="answer"] [class*="content"]{
-  background:var(--cream)!important;color:var(--ink)!important;
-  border:1px solid var(--border)!important;border-radius:4px 18px 18px 18px!important;
-  box-shadow:0 1px 3px var(--shadow)!important;padding:11px 15px!important;
-  font-size:15px!important;line-height:1.75!important;
-}
-
-/* User bubble */
-#sdk-root [class*="user-message"] [class*="bubble"],
-#sdk-root [class*="user-message"] [class*="content"],
-#sdk-root [class*="right-message"] [class*="bubble"],
-#sdk-root [class*="send"] [class*="bubble"],
-#sdk-root [class*="send"] [class*="content"],
-#sdk-root [class*="query"] [class*="bubble"],
-#sdk-root [class*="query"] [class*="content"]{
-  background:linear-gradient(135deg,var(--amber),var(--amber-2))!important;
-  color:#fff!important;border:none!important;
-  border-radius:18px 4px 18px 18px!important;
-  box-shadow:0 2px 8px rgba(200,98,43,.18)!important;padding:11px 15px!important;
-  font-size:15px!important;line-height:1.75!important;
-}
-
-/* Avatars */
-#sdk-root [class*="avatar"]{border-radius:50%!important;overflow:hidden}
-#sdk-root [class*="assistant"] [class*="avatar"],
-#sdk-root [class*="bot"] [class*="avatar"]{
-  background:radial-gradient(circle at 35% 28%,#FFF8ED,#F2D8B0 40%,var(--amber) 100%)!important;
-}
-#sdk-root [class*="user"] [class*="avatar"]{
-  background:linear-gradient(135deg,#E8C9A8,#C8A882)!important;
-}
-
-/* Input area */
-#sdk-root [class*="input-area"],
-#sdk-root [class*="input-bar"],
-#sdk-root [class*="chat-input"],
-#sdk-root [class*="chat-footer"],
-#sdk-root [class*="input-container"],
-#sdk-root [class*="editor"],
-#sdk-root [class*="input-wrapper"],
-#sdk-root [class*="composer"],
-#sdk-root [class*="footer"]{
-  background:var(--cream)!important;border-top:1px solid var(--border)!important;
-  padding:10px 14px!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;
-}
-#sdk-root textarea,
-#sdk-root [contenteditable="true"]{
-  background:var(--paper)!important;border:1px solid var(--border)!important;
-  border-radius:22px!important;padding:10px 16px!important;font-size:15px!important;
-  color:var(--ink)!important;line-height:1.5!important;min-height:40px!important;max-height:100px!important;
-}
-#sdk-root textarea::placeholder{color:var(--ink-3)!important}
-
-/* Send button */
-#sdk-root [class*="send-btn"],
-#sdk-root [class*="send-button"],
-#sdk-root button[class*="send"]{
-  background:var(--amber)!important;color:#fff!important;border-radius:50%!important;
-  width:36px!important;height:36px!important;display:flex!important;align-items:center!important;
-  justify-content:center!important;box-shadow:0 2px 8px rgba(200,98,43,.2)!important;
-}
-
-/* Welcome / suggested questions area */
-#sdk-root [class*="welcome"],
-#sdk-root [class*="greeting"],
-#sdk-root [class*="empty-state"]{
-  background:transparent!important;
-}
-#sdk-root [class*="suggest"],
-#sdk-root [class*="quick-reply"],
-#sdk-root [class*="recommend"],
-#sdk-root [class*="faq"],
-#sdk-root [class*="prompt-card"],
-#sdk-root button[class*="suggest"],
-#sdk-root [class*="recommend"] button{
-  background:var(--cream)!important;border:1px solid var(--amber-soft)!important;
-  color:var(--amber)!important;border-radius:16px!important;font-size:13px!important;
-  text-align:left!important;padding:10px 14px!important;line-height:1.5!important;
-}
-
-/* Hide brand / powered by */
-#sdk-root [class*="powered"],#sdk-root [class*="copyright"],
-#sdk-root [class*="brand"],#sdk-root [class*="logo-link"],
-#sdk-root [class*="coze-brand"],#sdk-root [class*="footer-text"]{display:none!important}
-
-/* Scrollbar */
-#sdk-root ::-webkit-scrollbar{width:0;height:0;display:none}
-#sdk-root *{scrollbar-width:none}
-
-/* Error */
-#sdk-error{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--ink-2)}
-#sdk-error.show{display:flex}
-#sdk-error p{font-size:14px;line-height:1.8;margin-bottom:20px}
-#sdk-error button{padding:10px 28px;border-radius:10px;background:var(--amber);color:#fff;font-size:14px}
-
-/* Loading */
-.init-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;color:var(--ink-3);font-size:14px;background:var(--paper)}
-.init-loading .dots{display:inline-flex;gap:4px;margin-left:8px}
-.init-loading .dots span{width:7px;height:7px;border-radius:50%;background:var(--amber-soft);animation:bounce 1.3s ease-in-out infinite}
-.init-loading .dots span:nth-child(2){animation-delay:.15s}
-.init-loading .dots span:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+/* ========== Chat App（Coze SDK 原装界面，全屏） ========== */
+#app{display:none;height:100%;height:100dvh}
+#app.show{display:block}
+#sdk-root{height:100%;width:100%}
 </style>
 </head>
 <body>
@@ -246,28 +60,9 @@ input{font-family:inherit;outline:none;border:none}
   <p class="opening-foot">夏山启明星创造营 · AI向善工作坊</p>
 </div>
 
-<!-- Chat App -->
+<!-- Chat App: Coze 官方 SDK 原装界面 -->
 <div id="app">
-  <div class="topbar">
-    <div class="tb-avatar"></div>
-    <div class="tb-info">
-      <h2>Mira</h2>
-      <p>照见 · 在线</p>
-    </div>
-    <div class="tb-right">
-      <button class="tb-btn" id="newChatBtn" title="新对话">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      </button>
-    </div>
-  </div>
-
-  <div id="sdk-root">
-    <div class="init-loading" id="initLoading">镜子正在擦亮<span class="dots"><span></span><span></span><span></span></span></div>
-    <div id="sdk-error">
-      <p>镜子好像蒙了一层雾…<br>请检查网络后重新打开</p>
-      <button onclick="location.reload()">重新连接</button>
-    </div>
-  </div>
+  <div id="sdk-root"></div>
 </div>
 
 <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.20/libs/cn/index.js"></script>
@@ -278,7 +73,11 @@ input{font-family:inherit;outline:none;border:none}
   var BOT_ID = '7678287170393735203';
   var PAT = 'pat_M3lmELwIxbXFeM5LwLySJnhB7It0v0itfQfQZGmsaBCf7lrp8guynkaL5G8b06Vh';
 
-  var sdkClient = null;
+  var opening = document.getElementById('opening');
+  var app = document.getElementById('app');
+  var nameInput = document.getElementById('nameInput');
+  var startBtn = document.getElementById('startBtn');
+  var sdkRoot = document.getElementById('sdk-root');
 
   var uid = localStorage.getItem('mira_uid');
   if(!uid){
@@ -286,309 +85,33 @@ input{font-family:inherit;outline:none;border:none}
     localStorage.setItem('mira_uid', uid);
   }
 
-  var opening = document.getElementById('opening');
-  var app = document.getElementById('app');
-  var nameInput = document.getElementById('nameInput');
-  var startBtn = document.getElementById('startBtn');
-  var sdkRoot = document.getElementById('sdk-root');
-  var initLoading = document.getElementById('initLoading');
-  var sdkError = document.getElementById('sdk-error');
-  var newChatBtn = document.getElementById('newChatBtn');
-  var sdkClient = null;
-  var userName = '';
+  var sdkStarted = false;
 
-  function hideLoading(){ initLoading.style.display = 'none'; }
-  function showError(msg){
-    initLoading.style.display = 'none';
-    if(msg){ sdkError.querySelector('p').innerHTML = msg; }
-    sdkError.classList.add('show');
-  }
+  function start(){
+    var name = nameInput.value.trim();
+    if(!name){ nameInput.focus(); nameInput.style.borderColor = '#E8A87C'; return; }
+    if(sdkStarted) return;
+    sdkStarted = true;
+    startBtn.disabled = true;
+    startBtn.textContent = '正 在 进 入…';
+    localStorage.setItem('mira_name', name);
 
-  // Deep search through shadow DOM
-  function deepQuerySelector(root, selector){
-    if(!root) return null;
-    var result = root.querySelector(selector);
-    if(result) return result;
-    var elements = root.querySelectorAll('*');
-    for(var i=0; i<elements.length; i++){
-      if(elements[i].shadowRoot){
-        result = deepQuerySelector(elements[i].shadowRoot, selector);
-        if(result) return result;
-      }
-    }
-    return null;
-  }
-
-  function deepQuerySelectorAll(root, selector){
-    var results = [];
-    if(!root) return results;
-    var found = root.querySelectorAll(selector);
-    for(var i=0; i<found.length; i++) results.push(found[i]);
-    var elements = root.querySelectorAll('*');
-    for(var j=0; j<elements.length; j++){
-      if(elements[j].shadowRoot){
-        results = results.concat(deepQuerySelectorAll(elements[j].shadowRoot, selector));
-      }
-    }
-    return results;
-  }
-
-  function dumpSDKInfo(){
-    console.log('[Mira] === SDK DOM Debug ===');
-    // Check sdkClient methods
-    if(sdkClient){
-      var methods = [];
-      for(var k in sdkClient){
-        if(typeof sdkClient[k] === 'function') methods.push(k);
-      }
-      console.log('[Mira] sdkClient methods:', methods.join(', '));
-    }
-    // Search for input elements in both light DOM and shadow DOM
-    var editables = deepQuerySelectorAll(sdkRoot, '[contenteditable="true"]');
-    var textareas = deepQuerySelectorAll(sdkRoot, 'textarea');
-    console.log('[Mira] contenteditable found:', editables.length, '| textarea found:', textareas.length);
-    if(editables.length > 0) console.log('[Mira] editable tag:', editables[0].tagName, 'class:', editables[0].className);
-    // Search for buttons
-    var buttons = deepQuerySelectorAll(sdkRoot, 'button');
-    var btnInfo = [];
-    for(var b=0; b<buttons.length; b++){
-      btnInfo.push(buttons[b].className.substring(0,60) + (buttons[b].disabled?'[disabled]':''));
-    }
-    console.log('[Mira] buttons (' + buttons.length + '):', btnInfo.join(' | '));
-    // Check if SDK uses shadow DOM
-    var hostElements = [];
-    var allEls = sdkRoot.querySelectorAll('*');
-    for(var e=0; e<allEls.length; e++){
-      if(allEls[e].shadowRoot) hostElements.push(allEls[e].tagName + '.' + allEls[e].className.substring(0,40));
-    }
-    if(hostElements.length > 0) console.log('[Mira] shadow DOM hosts:', hostElements.join(' | '));
-    console.log('[Mira] sdkRoot children:', sdkRoot.children.length);
-    for(var c=0; c<sdkRoot.children.length; c++){
-      console.log('[Mira] child', c, ':', sdkRoot.children[c].tagName, sdkRoot.children[c].className.substring(0,60), 'offsetHeight:', sdkRoot.children[c].offsetHeight);
-    }
-  }
-
-  // Send a message through the SDK by interacting with its DOM
-  function sendMessage(text){
-    if(!text) return;
-    console.log('[Mira] sendMessage called:', text.substring(0,30));
-
-    // First try SDK built-in method if available
-    if(sdkClient){
-      if(typeof sdkClient.sendMessage === 'function'){
-        console.log('[Mira] using sdkClient.sendMessage()');
-        sdkClient.sendMessage(text);
-        return;
-      }
-      if(typeof sdkClient.chat === 'function'){
-        console.log('[Mira] using sdkClient.chat()');
-        sdkClient.chat(text);
-        return;
-      }
-    }
-
-    // Find input - search both light DOM and shadow DOM
-    var input = deepQuerySelector(sdkRoot, '[contenteditable="true"]') ||
-                deepQuerySelector(sdkRoot, 'textarea');
-    console.log('[Mira] input found:', input ? input.tagName + '.' + input.className.substring(0,40) : 'NULL');
-    if(!input){
-      dumpSDKInfo();
-      return;
-    }
-
-    input.focus();
-
-    if(input.tagName === 'TEXTAREA'){
-      // Use native setter for React
-      var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-      nativeSetter.call(input, text);
-      input.dispatchEvent(new Event('input', {bubbles: true}));
-    } else {
-      // contenteditable div: use execCommand (most reliable for React)
-      try {
-        // Select all existing content and replace
-        input.focus();
-        var range = document.createRange();
-        range.selectNodeContents(input);
-        var sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        document.execCommand('insertText', false, text);
-        console.log('[Mira] execCommand insertText done');
-      } catch(err) {
-        console.warn('[Mira] execCommand failed, trying fallback:', err);
-        // Fallback: set textContent and dispatch events
-        input.textContent = text;
-        input.dispatchEvent(new InputEvent('input', {bubbles: true, cancelable: true, data: text, inputType: 'insertText'}));
-      }
-    }
-
-    // Find and click send button
+    opening.classList.add('hide');
     setTimeout(function(){
-      var sendBtn = null;
-      // Try various selectors, search through shadow DOM too
-      var sendSelectors = [
-        'button[class*="send-btn"]:not([disabled])',
-        'button[class*="sendButton"]:not([disabled])',
-        'button[class*="send"]:not([disabled])',
-        'div[class*="send-btn"]:not([disabled])',
-        'div[role="button"][class*="send"]:not([disabled])'
-      ];
-      for(var s=0; s<sendSelectors.length; s++){
-        sendBtn = deepQuerySelector(sdkRoot, sendSelectors[s]);
-        if(sendBtn) break;
-      }
-      // Fallback: any enabled button with send in class
-      if(!sendBtn){
-        var allBtns = deepQuerySelectorAll(sdkRoot, 'button, div[role="button"]');
-        for(var i=0; i<allBtns.length; i++){
-          if(!allBtns[i].disabled && /send|发送/i.test(allBtns[i].className)){
-            sendBtn = allBtns[i];
-            break;
-          }
-        }
-      }
-      console.log('[Mira] send button found:', sendBtn ? sendBtn.tagName + '.' + sendBtn.className.substring(0,40) : 'NULL');
-      if(sendBtn){
-        sendBtn.click();
-        console.log('[Mira] send button clicked');
-      } else {
-        dumpSDKInfo();
-      }
-    }, 250);
-  }
-
-  // Start new conversation
-  function startNewChat(){
-    // Try SDK method first
-    if(sdkClient){
-      if(typeof sdkClient.destroy === 'function'){
-        try { sdkClient.destroy(); } catch(e){}
-      }
-    }
-    // Reload is the most reliable way to reset
-    location.reload();
-  }
-
-
-  // ===== Mira skin: inject styles into every Shadow DOM root =====
-  var MIRA_SKIN_CSS = `
-/* 容器全部透明，露出宿主暖纸背景 */
-[class*="chat-window"],[class*="chat-container"],[class*="chat-content"],[class*="chat-body"],
-[class*="conversation"],[class*="message-list"],[class*="msg-list"],[class*="messages"],
-[class*="scroll-content"],[class*="main-content"],[class*="layout-body"],[class*="content-wrapper"],
-[class*="welcome"],[class*="greeting"],[class*="empty-state"],[class*="home-page"],[class*="chat-home"],
-[class*="chat-layout"],[class*="page-chat"]{
-  background:transparent !important;background-image:none !important;
-}
-/* 隐藏 SDK 内部头部/品牌/悬浮按钮 */
-[class*="nav-bar"],[class*="navbar"],[class*="chat-header"],[class*="top-bar"],[class*="header-bar"],
-[class*="powered"],[class*="copyright"],[class*="brand-link"],[class*="logo-link"],
-[class*="asst-btn"],[class*="assistant-btn"],[class*="float-btn"],[class*="phone-btn"],[class*="voice-btn"],[class*="mic-btn"]{
-  display:none !important;
-}
-/* 消息行透明 */
-[class*="message-item"],[class*="message-row"],[class*="msg-item"],[class*="message-list-item"]{
-  background:transparent !important;
-}
-/* 助手气泡：暖白卡片 */
-[class*="assistant"] [class*="bubble"],[class*="bot-message"] [class*="bubble"],
-[class*="left-message"] [class*="bubble"],[class*="receive"] [class*="bubble"],[class*="answer"] [class*="bubble"],
-[class*="assistant"] [class*="message-content"],[class*="bot-message"] [class*="message-content"],
-[class*="left-message"] [class*="message-content"]{
-  background:#FFFCF5 !important;color:#2C2418 !important;
-  border:1px solid rgba(44,36,24,.08) !important;border-radius:4px 18px 18px 18px !important;
-  box-shadow:0 1px 3px rgba(44,36,24,.06) !important;padding:11px 15px !important;
-  font-size:15px !important;line-height:1.75 !important;
-}
-/* 用户气泡：琥珀渐变 + 白字 */
-[class*="user-message"] [class*="bubble"],[class*="right-message"] [class*="bubble"],
-[class*="send-message"] [class*="bubble"],[class*="query"] [class*="bubble"],
-[class*="user-message"] [class*="message-content"],[class*="right-message"] [class*="message-content"]{
-  background:linear-gradient(135deg,#C8622B,#D4783F) !important;color:#fff !important;border:none !important;
-  border-radius:18px 4px 18px 18px !important;box-shadow:0 2px 8px rgba(200,98,43,.18) !important;
-  padding:11px 15px !important;font-size:15px !important;line-height:1.75 !important;
-}
-/* 头像 */
-[class*="avatar"]{border-radius:50% !important;overflow:hidden;}
-[class*="assistant"] [class*="avatar"],[class*="bot"] [class*="avatar"]{
-  background:radial-gradient(circle at 35% 28%,#FFF8ED,#F2D8B0 40%,#C8622B 100%) !important;
-}
-/* 快捷指令按钮：暖白胶囊 + 琥珀描边，文字完整换行 */
-[class*="suggest"],[class*="quick-reply"],[class*="recommend-list"],[class*="faq"],
-[class*="prompt-card"],[class*="chips"],[class*="quick-list"],[class*="welcome-question"]{
-  background:transparent !important;flex-wrap:wrap !important;gap:8px !important;
-}
-[class*="suggest"] button,[class*="quick-reply"] button,[class*="recommend"] button,[class*="faq"] button,
-[class*="prompt-card"] button,button[class*="suggest"],button[class*="chip"],
-[class*="chips"] button,[class*="quick-list"] button,[class*="welcome-question"] button,[class*="prompt"] [role="button"]{
-  background:#FFFCF5 !important;border:1px solid #F0C9A0 !important;color:#C8622B !important;
-  border-radius:16px !important;font-size:13px !important;line-height:1.5 !important;
-  padding:9px 14px !important;text-align:left !important;white-space:normal !important;
-  height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;
-  text-overflow:clip !important;box-shadow:0 1px 3px rgba(44,36,24,.06) !important;
-}
-/* 输入区：半透明暖白 + 毛玻璃 */
-[class*="input-area"],[class*="input-bar"],[class*="chat-input"],[class*="chat-footer"],
-[class*="input-container"],[class*="composer"],[class*="editor-wrapper"],[class*="footer-bar"]{
-  background:rgba(255,252,245,.92) !important;
-  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px) !important;
-  border-top:1px solid rgba(44,36,24,.08) !important;padding:10px 14px !important;
-}
-textarea,[contenteditable="true"]{
-  background:#FBF6EC !important;border:1px solid rgba(44,36,24,.12) !important;border-radius:22px !important;
-  padding:10px 16px !important;font-size:15px !important;color:#2C2418 !important;line-height:1.5 !important;
-}
-textarea::placeholder,[contenteditable="true"]::before{color:#B8A99A !important;}
-button[class*="send"]{
-  background:#C8622B !important;color:#fff !important;border-radius:50% !important;
-  box-shadow:0 2px 8px rgba(200,98,43,.2) !important;
-}
-::-webkit-scrollbar{width:0;height:0;display:none;}
-`;
-
-  function injectIntoRoot(root){
-    if(!root || !root.querySelector) return;
-    if(!root.querySelector('style[data-mira-skin]')){
-      try{
-        var st = document.createElement('style');
-        st.setAttribute('data-mira-skin','1');
-        st.textContent = MIRA_SKIN_CSS;
-        root.appendChild(st);
-      }catch(e){}
-    }
-    var hosts = root.querySelectorAll('*');
-    for(var i=0;i<hosts.length;i++){
-      if(hosts[i].shadowRoot) injectIntoRoot(hosts[i].shadowRoot);
-    }
-  }
-
-  function injectMiraSkin(){
-    injectIntoRoot(document);
-  }
-
-  var skinTimer = null;
-  function startSkinInjection(){
-    injectMiraSkin();
-    var ticks = 0;
-    if(skinTimer) clearInterval(skinTimer);
-    skinTimer = setInterval(function(){
-      injectMiraSkin();
-      ticks++;
-      if(ticks > 20){ clearInterval(skinTimer); skinTimer = null; }
-    }, 600);
+      opening.style.display = 'none';
+      app.classList.add('show');
+      initSDK(name);
+    }, 550);
   }
 
   function initSDK(nickname){
     if(typeof CozeWebSDK === 'undefined'){
-      showError('SDK 加载失败，请刷新重试');
+      sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">镜子好像蒙了一层雾…<br>请检查网络后重新打开<br><button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border-radius:10px;background:#C8622B;color:#fff;font-size:14px;">重新连接</button></div>';
       return;
     }
 
-    console.log('[Mira] SDK 开始初始化, botId:', BOT_ID);
-
     try{
-      sdkClient = new CozeWebSDK.WebChatClient({
+      new CozeWebSDK.WebChatClient({
         config: {
           botId: BOT_ID,
           isIframe: false
@@ -613,53 +136,15 @@ button[class*="send"]{
           chatBot: {
             title: 'Mira',
             uploadable: false,
-            el: sdkRoot,
-            onShow: function(){
-              console.log('[Mira] SDK onShow');
-              hideLoading();
-            }
+            el: sdkRoot
           },
           footer: { isShow: false }
         }
       });
-
-      console.log('[Mira] WebChatClient 构造完成');
-
-      if(typeof sdkClient.showChatBot === 'function'){
-        sdkClient.showChatBot();
-      }
-      startSkinInjection();
-
-      // Debug: dump SDK info after init
-      setTimeout(function(){ dumpSDKInfo(); }, 2000);
-
-      // Safety timeout
-      setTimeout(hideLoading, 1500);
-
     }catch(e){
-      console.error('[Mira] SDK init error:', e);
-      showError('初始化失败：' + e.message + '<br>请刷新重试');
+      sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">初始化失败，请刷新重试</div>';
     }
   }
-
-  function start(){
-    var name = nameInput.value.trim();
-    if(!name){ nameInput.focus(); nameInput.style.borderColor = '#E8A87C'; return; }
-    startBtn.disabled = true;
-    startBtn.textContent = '正 在 进 入…';
-    userName = name;
-    localStorage.setItem('mira_name', name);
-
-    opening.classList.add('hide');
-    setTimeout(function(){
-      opening.style.display = 'none';
-      app.classList.add('show');
-      requestAnimationFrame(function(){ initSDK(name); });
-    }, 550);
-  }
-
-  // New chat button
-  newChatBtn.addEventListener('click', startNewChat);
 
   var savedName = localStorage.getItem('mira_name');
   if(savedName){ nameInput.value = savedName; }
