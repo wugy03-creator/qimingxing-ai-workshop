@@ -163,6 +163,38 @@ input{font-family:inherit;outline:none;border:none}
     }, 1000);
   }
 
+  // ===== 入营注册表（成长报告素材索引；纯旁路，失败静默，绝不影响聊天）=====
+  // 消息全量永久保存在 Coze 后台（官方存储），这里只上报「姓名↔conversation_id」到飞书归档群，
+  // 营队后凭 conv_id 调 Coze 官方消息 API 批量拉全量对话导出成长报告底稿。
+  // MIRA_HOOK 为飞书群自定义机器人 webhook（开营前由配置填入；留空则静默跳过，不影响任何功能）
+  var MIRA_HOOK = '';
+  var REG = { convId:null, done:false };
+  (function installConvHook(){
+    function grab(u){ if(typeof u==='string' && !REG.convId){ var m=u.match(/conversation_id=(\d{10,})/); if(m) REG.convId=m[1]; } }
+    var of = window.fetch;
+    if(of){ window.fetch = function(){ try{ grab(arguments[0] && arguments[0].url ? arguments[0].url : arguments[0]); }catch(e){} return of.apply(this, arguments); }; }
+    var oo = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(m,u){ try{ grab(u); }catch(e){} return oo.apply(this, arguments); };
+  })();
+  function registerTick(){
+    if(!MIRA_HOOK || REG.done || !REG.convId) return;
+    var name = localStorage.getItem('mira_name');
+    if(!name) return;
+    if(localStorage.getItem('mira_reg_conv') === REG.convId){ REG.done = true; return; }
+    REG.done = true;
+    try{
+      var text = '🪞 Mira 入营登记\n姓名：'+name+'\n会话：'+REG.convId+'\n时间：'+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
+      fetch(MIRA_HOOK, {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({msg_type:'text', content:{text:text}})})
+        .then(function(){ localStorage.setItem('mira_reg_conv', REG.convId); })
+        .catch(function(){ REG.done = false; });
+    }catch(e){ REG.done = false; }
+  }
+  function startArchive(){
+    setInterval(registerTick, 3000);
+    setTimeout(registerTick, 4000);
+  }
+
   function showRetry(msg){
     sdkRoot.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#6B5D4F;font-size:14px;line-height:1.8;">' + msg + '<br><button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border-radius:10px;background:#C8622B;color:#fff;font-size:14px;">重新连接</button></div>';
   }
@@ -215,6 +247,7 @@ input{font-family:inherit;outline:none;border:none}
         client.showChatBot();
       }
       startIconHide();
+      startArchive();
     }catch(e){
       showRetry('初始化失败，请刷新重试');
       return;
