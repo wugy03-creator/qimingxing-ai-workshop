@@ -52,13 +52,6 @@ input{font-family:inherit;outline:none;border:none}
 .tb-btn svg{width:18px;height:18px}
 
 /* ========== Scene Bar ========== */
-.scene-bar{flex-shrink:0;display:flex;gap:8px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;background:rgba(251,246,236,.95);border-bottom:1px solid var(--border);z-index:5}
-.scene-bar::-webkit-scrollbar{display:none}
-.scene-pill{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;background:var(--cream);border:1px solid var(--border);font-size:13px;color:var(--ink-2);white-space:nowrap;transition:all .25s;position:relative;overflow:hidden}
-.scene-pill:active{transform:scale(.95)}
-.scene-pill.active{background:linear-gradient(135deg,var(--amber),var(--amber-2));color:#fff;border-color:transparent;box-shadow:0 2px 10px rgba(200,98,43,.25)}
-.scene-pill .sp-icon{font-size:15px;line-height:1}
-.scene-pill .sp-label{font-weight:500}
 
 /* SDK container */
 #sdk-root{flex:1;min-height:0;position:relative;overflow:hidden;width:100%}
@@ -266,14 +259,6 @@ input{font-family:inherit;outline:none;border:none}
     </div>
   </div>
 
-  <!-- Scene Switcher -->
-  <div class="scene-bar" id="sceneBar">
-    <button class="scene-pill active" data-scene="chat"><span class="sp-icon">💬</span><span class="sp-label">随便聊聊</span></button>
-    <button class="scene-pill" data-scene="review"><span class="sp-icon">🔍</span><span class="sp-label">看看方案</span></button>
-    <button class="scene-pill" data-scene="rehearsal"><span class="sp-icon">🎤</span><span class="sp-label">路演提问</span></button>
-    <button class="scene-pill" data-scene="report"><span class="sp-icon">📋</span><span class="sp-label">成长报告</span></button>
-  </div>
-
   <div id="sdk-root">
     <div class="init-loading" id="initLoading">镜子正在擦亮<span class="dots"><span></span><span></span><span></span></span></div>
     <div id="sdk-error">
@@ -291,15 +276,7 @@ input{font-family:inherit;outline:none;border:none}
   var BOT_ID = '7678287170393735203';
   var PAT = 'pat_M3lmELwIxbXFeM5LwLySJnhB7It0v0itfQfQZGmsaBCf7lrp8guynkaL5G8b06Vh';
 
-  // Scene prompts
-  var SCENES = {
-    chat: '你好Mira，我想和你随便聊聊。',
-    review: 'Mira，我们组想请你帮我们补方案盲区。你先问问我们方案的情况吧，我们一个个回答，然后你从家长、孩子、运营者三个视角给我们反馈。',
-    rehearsal: 'Mira，我们组马上要路演了，想请你当镜子评委。你先了解一下我们的方案，然后问我们那些还没问过自己的问题。',
-    report: 'Mira，我们的对话差不多了，请给我一份成长报告，总结你在对话中观察到的我。'
-  };
-
-  var currentScene = 'chat';
+  var sdkClient = null;
 
   var uid = localStorage.getItem('mira_uid');
   if(!uid){
@@ -314,7 +291,6 @@ input{font-family:inherit;outline:none;border:none}
   var sdkRoot = document.getElementById('sdk-root');
   var initLoading = document.getElementById('initLoading');
   var sdkError = document.getElementById('sdk-error');
-  var sceneBar = document.getElementById('sceneBar');
   var newChatBtn = document.getElementById('newChatBtn');
   var sdkClient = null;
   var userName = '';
@@ -480,24 +456,6 @@ input{font-family:inherit;outline:none;border:none}
     }, 250);
   }
 
-  // Switch active scene
-  function switchScene(scene){
-    if(scene === currentScene) return;
-    currentScene = scene;
-
-    // Update pill UI
-    var pills = sceneBar.querySelectorAll('.scene-pill');
-    pills.forEach(function(p){
-      p.classList.toggle('active', p.dataset.scene === scene);
-    });
-
-    // Send scene prompt
-    var prompt = SCENES[scene];
-    if(prompt){
-      setTimeout(function(){ sendMessage(prompt); }, 300);
-    }
-  }
-
   // Start new conversation
   function startNewChat(){
     // Try SDK method first
@@ -587,12 +545,6 @@ input{font-family:inherit;outline:none;border:none}
       requestAnimationFrame(function(){ initSDK(name); });
     }, 550);
   }
-
-  // Scene bar clicks
-  sceneBar.addEventListener('click', function(e){
-    var pill = e.target.closest('.scene-pill');
-    if(pill){ switchScene(pill.dataset.scene); }
-  });
 
   // New chat button
   newChatBtn.addEventListener('click', startNewChat);
