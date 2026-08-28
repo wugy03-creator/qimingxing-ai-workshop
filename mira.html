@@ -54,7 +54,9 @@ input{font-family:inherit;outline:none;border:none}
 /* ========== Scene Bar ========== */
 
 /* SDK container */
-#sdk-root{flex:1;min-height:0;position:relative;overflow:hidden;width:100%}
+#sdk-root{flex:1;min-height:0;position:relative;overflow:hidden;width:100%;background:#FBF6EC url('imgs/mira_chat_bg_1.jpg') center center/cover no-repeat}
+#sdk-root::before{content:'';position:absolute;inset:0;background:rgba(251,246,236,.42);z-index:0;pointer-events:none}
+#sdk-root > *{position:relative;z-index:1}
 
 /* ========== SDK DOM Overrides ========== */
 /* Force warm paper background on EVERYTHING inside SDK */
@@ -468,6 +470,115 @@ input{font-family:inherit;outline:none;border:none}
     location.reload();
   }
 
+
+  // ===== Mira skin: inject styles into every Shadow DOM root =====
+  var MIRA_SKIN_CSS = `
+/* 容器全部透明，露出宿主暖纸背景 */
+[class*="chat-window"],[class*="chat-container"],[class*="chat-content"],[class*="chat-body"],
+[class*="conversation"],[class*="message-list"],[class*="msg-list"],[class*="messages"],
+[class*="scroll-content"],[class*="main-content"],[class*="layout-body"],[class*="content-wrapper"],
+[class*="welcome"],[class*="greeting"],[class*="empty-state"],[class*="home-page"],[class*="chat-home"],
+[class*="chat-layout"],[class*="page-chat"]{
+  background:transparent !important;background-image:none !important;
+}
+/* 隐藏 SDK 内部头部/品牌/悬浮按钮 */
+[class*="nav-bar"],[class*="navbar"],[class*="chat-header"],[class*="top-bar"],[class*="header-bar"],
+[class*="powered"],[class*="copyright"],[class*="brand-link"],[class*="logo-link"],
+[class*="asst-btn"],[class*="assistant-btn"],[class*="float-btn"],[class*="phone-btn"],[class*="voice-btn"],[class*="mic-btn"]{
+  display:none !important;
+}
+/* 消息行透明 */
+[class*="message-item"],[class*="message-row"],[class*="msg-item"],[class*="message-list-item"]{
+  background:transparent !important;
+}
+/* 助手气泡：暖白卡片 */
+[class*="assistant"] [class*="bubble"],[class*="bot-message"] [class*="bubble"],
+[class*="left-message"] [class*="bubble"],[class*="receive"] [class*="bubble"],[class*="answer"] [class*="bubble"],
+[class*="assistant"] [class*="message-content"],[class*="bot-message"] [class*="message-content"],
+[class*="left-message"] [class*="message-content"]{
+  background:#FFFCF5 !important;color:#2C2418 !important;
+  border:1px solid rgba(44,36,24,.08) !important;border-radius:4px 18px 18px 18px !important;
+  box-shadow:0 1px 3px rgba(44,36,24,.06) !important;padding:11px 15px !important;
+  font-size:15px !important;line-height:1.75 !important;
+}
+/* 用户气泡：琥珀渐变 + 白字 */
+[class*="user-message"] [class*="bubble"],[class*="right-message"] [class*="bubble"],
+[class*="send-message"] [class*="bubble"],[class*="query"] [class*="bubble"],
+[class*="user-message"] [class*="message-content"],[class*="right-message"] [class*="message-content"]{
+  background:linear-gradient(135deg,#C8622B,#D4783F) !important;color:#fff !important;border:none !important;
+  border-radius:18px 4px 18px 18px !important;box-shadow:0 2px 8px rgba(200,98,43,.18) !important;
+  padding:11px 15px !important;font-size:15px !important;line-height:1.75 !important;
+}
+/* 头像 */
+[class*="avatar"]{border-radius:50% !important;overflow:hidden;}
+[class*="assistant"] [class*="avatar"],[class*="bot"] [class*="avatar"]{
+  background:radial-gradient(circle at 35% 28%,#FFF8ED,#F2D8B0 40%,#C8622B 100%) !important;
+}
+/* 快捷指令按钮：暖白胶囊 + 琥珀描边，文字完整换行 */
+[class*="suggest"],[class*="quick-reply"],[class*="recommend-list"],[class*="faq"],
+[class*="prompt-card"],[class*="chips"],[class*="quick-list"],[class*="welcome-question"]{
+  background:transparent !important;flex-wrap:wrap !important;gap:8px !important;
+}
+[class*="suggest"] button,[class*="quick-reply"] button,[class*="recommend"] button,[class*="faq"] button,
+[class*="prompt-card"] button,button[class*="suggest"],button[class*="chip"],
+[class*="chips"] button,[class*="quick-list"] button,[class*="welcome-question"] button,[class*="prompt"] [role="button"]{
+  background:#FFFCF5 !important;border:1px solid #F0C9A0 !important;color:#C8622B !important;
+  border-radius:16px !important;font-size:13px !important;line-height:1.5 !important;
+  padding:9px 14px !important;text-align:left !important;white-space:normal !important;
+  height:auto !important;min-height:0 !important;max-height:none !important;overflow:visible !important;
+  text-overflow:clip !important;box-shadow:0 1px 3px rgba(44,36,24,.06) !important;
+}
+/* 输入区：半透明暖白 + 毛玻璃 */
+[class*="input-area"],[class*="input-bar"],[class*="chat-input"],[class*="chat-footer"],
+[class*="input-container"],[class*="composer"],[class*="editor-wrapper"],[class*="footer-bar"]{
+  background:rgba(255,252,245,.92) !important;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px) !important;
+  border-top:1px solid rgba(44,36,24,.08) !important;padding:10px 14px !important;
+}
+textarea,[contenteditable="true"]{
+  background:#FBF6EC !important;border:1px solid rgba(44,36,24,.12) !important;border-radius:22px !important;
+  padding:10px 16px !important;font-size:15px !important;color:#2C2418 !important;line-height:1.5 !important;
+}
+textarea::placeholder,[contenteditable="true"]::before{color:#B8A99A !important;}
+button[class*="send"]{
+  background:#C8622B !important;color:#fff !important;border-radius:50% !important;
+  box-shadow:0 2px 8px rgba(200,98,43,.2) !important;
+}
+::-webkit-scrollbar{width:0;height:0;display:none;}
+`;
+
+  function injectIntoRoot(root){
+    if(!root || !root.querySelector) return;
+    if(!root.querySelector('style[data-mira-skin]')){
+      try{
+        var st = document.createElement('style');
+        st.setAttribute('data-mira-skin','1');
+        st.textContent = MIRA_SKIN_CSS;
+        root.appendChild(st);
+      }catch(e){}
+    }
+    var hosts = root.querySelectorAll('*');
+    for(var i=0;i<hosts.length;i++){
+      if(hosts[i].shadowRoot) injectIntoRoot(hosts[i].shadowRoot);
+    }
+  }
+
+  function injectMiraSkin(){
+    injectIntoRoot(document);
+  }
+
+  var skinTimer = null;
+  function startSkinInjection(){
+    injectMiraSkin();
+    var ticks = 0;
+    if(skinTimer) clearInterval(skinTimer);
+    skinTimer = setInterval(function(){
+      injectMiraSkin();
+      ticks++;
+      if(ticks > 20){ clearInterval(skinTimer); skinTimer = null; }
+    }, 600);
+  }
+
   function initSDK(nickname){
     if(typeof CozeWebSDK === 'undefined'){
       showError('SDK 加载失败，请刷新重试');
@@ -517,6 +628,7 @@ input{font-family:inherit;outline:none;border:none}
       if(typeof sdkClient.showChatBot === 'function'){
         sdkClient.showChatBot();
       }
+      startSkinInjection();
 
       // Debug: dump SDK info after init
       setTimeout(function(){ dumpSDKInfo(); }, 2000);
