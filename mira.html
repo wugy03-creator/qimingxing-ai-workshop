@@ -104,9 +104,10 @@ input{font-family:inherit;outline:none;border:none}
     }, 550);
   }
 
-  // ===== 轻量处理：隐藏快捷指令按钮内的默认图标（后台无法删除，微信里偶发裂图）=====
-  // 纯 CSS 注入，失败无任何副作用；不碰 SDK 任何逻辑
-  var ICON_CSS = '[class*="suggest"] img,[class*="shortcut"] img,[class*="quick-action"] img,[class*="quick-list"] img,[class*="recommend"] img,[class*="prompt-card"] img,[class*="faq"] img,[class*="chips"] img,[class*="welcome-question"] img{display:none !important;}';
+  // ===== 轻量处理：隐藏快捷指令默认图标 + 隐藏「新建会话/关闭」按钮（保护整场对话记忆，成长报告依赖它）=====
+  // 纯 CSS + 位置扫描，失败无任何副作用；不碰 SDK 任何逻辑
+  var ICON_CSS = '[class*="suggest"] img,[class*="shortcut"] img,[class*="quick-action"] img,[class*="quick-list"] img,[class*="recommend"] img,[class*="prompt-card"] img,[class*="faq"] img,[class*="chips"] img,[class*="welcome-question"] img{display:none !important;}'
+    + '#sdk-root header .coze-chat-sdk-semi-button-with-icon-only{display:none !important;}';
   function injectIconHide(root){
     if(!root || !root.querySelector) return;
     if(!root.querySelector('style[data-mira-icon-hide]')){
@@ -122,14 +123,29 @@ input{font-family:inherit;outline:none;border:none}
       if(hosts[i].shadowRoot) injectIconHide(hosts[i].shadowRoot);
     }
   }
+  // ✕ 关闭按钮是 header 外的哈希类 div，只能按位置藏：右上角 32x32、含 svg、非 button、不在 header 内
+  function hideCloseDiv(){
+    try{
+      var vw = window.innerWidth;
+      var divs = sdkRoot.querySelectorAll('div');
+      for(var i=0;i<divs.length;i++){
+        var el = divs[i];
+        if(el.style.display === 'none') continue;
+        var r = el.getBoundingClientRect();
+        if(r.top >= 0 && r.top < 56 && (vw - r.right) < 56 && r.width >= 24 && r.width <= 44 && r.height >= 24 && r.height <= 44
+           && el.tagName !== 'BUTTON' && !el.closest('header') && el.querySelector('svg')){
+          el.style.display = 'none';
+        }
+      }
+    }catch(e){}
+  }
   function startIconHide(){
     injectIconHide(document);
-    var n = 0;
+    hideCloseDiv();
     var t = setInterval(function(){
       injectIconHide(document);
-      n++;
-      if(n > 60){ clearInterval(t); }
-    }, 1000);
+      hideCloseDiv();
+    }, 1500);
   }
 
   function showRetry(msg){
