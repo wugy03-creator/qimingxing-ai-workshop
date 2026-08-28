@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#FBF6EC">
 <title>Mira · 照见</title>
@@ -47,17 +47,17 @@ input{font-family:inherit;outline:none;border:none}
 .tb-info h2{font-family:'Songti SC','STSong',serif;font-size:16px;font-weight:500;line-height:1.2}
 .tb-info p{font-size:11px;color:var(--amber);letter-spacing:.5px;margin-top:1px}
 
-/* SDK container: MUST have explicit height for SDK el mounting */
-#sdk-root{flex:1;min-height:0;position:relative;overflow:hidden}
-#sdk-root > *{height:100%!important}
+/* SDK container: explicit dimensions for el mounting */
+#sdk-root{flex:1;min-height:0;position:relative;overflow:hidden;width:100%}
 
-/* ========== SDK DOM Overrides ========== */
+/* ========== SDK DOM Overrides (conservative) ========== */
 #sdk-root *{box-sizing:border-box}
 
-/* Hide SDK internal headers/nav */
-#sdk-root [class*="header"],#sdk-root [class*="nav-bar"]{display:none!important}
+/* Only hide the SDK's own top title bar (very specific selectors) */
+#sdk-root .coze-chat-sdk-header,
+#sdk-root [data-testid="chat-header"]{display:none!important}
 
-/* Chat container backgrounds */
+/* Chat backgrounds */
 #sdk-root [class*="chat-container"],
 #sdk-root [class*="ChatContainer"],
 #sdk-root [class*="chat-layout"],
@@ -66,7 +66,7 @@ input{font-family:inherit;outline:none;border:none}
 #sdk-root [class*="message-list"],
 #sdk-root [class*="msg-list"],
 #sdk-root [class*="chat-inner"]{
-  background:transparent!important;border:none!important;
+  background:transparent!important;
 }
 
 /* Message row */
@@ -142,43 +142,16 @@ input{font-family:inherit;outline:none;border:none}
   background:var(--amber)!important;color:#fff!important;border-radius:50%!important;
   width:36px!important;height:36px!important;display:flex!important;align-items:center!important;
   justify-content:center!important;box-shadow:0 2px 8px rgba(200,98,43,.2)!important;
-  transition:transform .15s!important;
 }
-#sdk-root [class*="send-btn"]:active{transform:scale(.92)!important}
-#sdk-root [class*="send-btn"][disabled]{background:var(--ink-3)!important;box-shadow:none!important}
 
 /* Hide brand */
 #sdk-root [class*="powered"],#sdk-root [class*="copyright"],
 #sdk-root [class*="brand"],#sdk-root [class*="logo-link"],
 #sdk-root [class*="coze-brand"],#sdk-root [class*="footer-text"]{display:none!important}
 
-/* Conversation list */
-#sdk-root [class*="conversation-list"],
-#sdk-root [class*="drawer"],
-#sdk-root [class*="sidebar"]{background:var(--paper)!important}
-
 /* Scrollbar */
 #sdk-root ::-webkit-scrollbar{width:0;height:0;display:none}
 #sdk-root *{scrollbar-width:none}
-
-/* Suggested questions */
-#sdk-root [class*="suggest"],
-#sdk-root [class*="quick-reply"],
-#sdk-root [class*="recommend"]{
-  background:var(--cream)!important;border:1px solid var(--amber-soft)!important;
-  color:var(--amber)!important;border-radius:20px!important;font-size:13px!important;
-}
-
-/* Typing */
-#sdk-root [class*="typing"],#sdk-root [class*="loading-dots"]{color:var(--ink-3)!important}
-#sdk-root [class*="typing"] span,#sdk-root [class*="dot"]{background:var(--amber)!important}
-
-/* Welcome / empty state */
-#sdk-root [class*="welcome"],
-#sdk-root [class*="empty"],
-#sdk-root [class*="greeting"]{
-  background:transparent!important;
-}
 
 /* Error */
 #sdk-error{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:var(--ink-2)}
@@ -187,7 +160,7 @@ input{font-family:inherit;outline:none;border:none}
 #sdk-error button{padding:10px 28px;border-radius:10px;background:var(--amber);color:#fff;font-size:14px}
 
 /* Loading */
-.init-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;color:var(--ink-3);font-size:14px}
+.init-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;color:var(--ink-3);font-size:14px;background:var(--paper)}
 .init-loading .dots{display:inline-flex;gap:4px;margin-left:8px}
 .init-loading .dots span{width:7px;height:7px;border-radius:50%;background:var(--amber-soft);animation:bounce 1.3s ease-in-out infinite}
 .init-loading .dots span:nth-child(2){animation-delay:.15s}
@@ -248,16 +221,26 @@ input{font-family:inherit;outline:none;border:none}
   var startBtn = document.getElementById('startBtn');
   var sdkRoot = document.getElementById('sdk-root');
   var initLoading = document.getElementById('initLoading');
+  var sdkError = document.getElementById('sdk-error');
   var sdkClient = null;
+
+  function hideLoading(){
+    initLoading.style.display = 'none';
+  }
+
+  function showError(msg){
+    initLoading.style.display = 'none';
+    if(msg){ sdkError.querySelector('p').innerHTML = msg; }
+    sdkError.classList.add('show');
+  }
 
   function initSDK(nickname){
     if(typeof CozeWebSDK === 'undefined'){
-      initLoading.innerHTML = 'SDK 加载失败，请刷新重试';
+      showError('SDK 加载失败，请刷新重试');
       return;
     }
 
-    var avatarSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><defs><radialGradient id="g" cx="38%" cy="32%"><stop offset="0%" stop-color="#FFF8ED"/><stop offset="45%" stop-color="#F2D8B0"/><stop offset="100%" stop-color="#C8622B"/></radialGradient></defs><circle cx="40" cy="40" r="38" fill="url(#g)"/><ellipse cx="30" cy="28" rx="10" ry="15" fill="rgba(255,255,255,.4)" transform="rotate(-22 30 28)"/></svg>';
-    var avatarUrl = 'data:image/svg+xml,' + encodeURIComponent(avatarSvg);
+    console.log('[Mira] SDK 开始初始化, botId:', BOT_ID);
 
     try{
       sdkClient = new CozeWebSDK.WebChatClient({
@@ -268,33 +251,74 @@ input{font-family:inherit;outline:none;border:none}
         auth: {
           type: 'token',
           token: PAT,
-          onRefreshToken: async function(){ return PAT; }
+          onRefreshToken: function(){
+            return new Promise(function(resolve){ resolve(PAT); });
+          }
         },
         userInfo: {
           id: uid,
           nickname: nickname || '朋友'
         },
         ui: {
+          base: {
+            layout: 'mobile',
+            lang: 'zh-CN'
+          },
           asstBtn: { isNeed: false },
           chatBot: {
             title: 'Mira',
             uploadable: false,
-            el: sdkRoot
+            el: sdkRoot,
+            onShow: function(){
+              console.log('[Mira] SDK onShow 回调触发');
+              hideLoading();
+            },
+            onHide: function(){
+              console.log('[Mira] SDK onHide 回调触发');
+            }
           },
           footer: { isShow: false }
         }
       });
 
-      // 安全超时：3秒后强制隐藏 loading，无论 SDK 是否渲染成功
+      console.log('[Mira] WebChatClient 构造完成，尝试 showChatBot...');
+      console.log('[Mira] sdkClient 方法:', Object.keys(sdkClient).join(', '));
+
+      // el 挂载模式下需要主动显示聊天框
+      if(typeof sdkClient.showChatBot === 'function'){
+        sdkClient.showChatBot();
+        console.log('[Mira] showChatBot() 已调用');
+      }else{
+        console.warn('[Mira] showChatBot 方法不存在，SDK可能自动渲染');
+      }
+
+      // 安全超时：5秒后检查状态
+      setTimeout(function(){
+        var sdkDom = sdkRoot.querySelector('[class*="coze-chat"], [class*="chat-sdk"], iframe');
+        var visibleChildren = 0;
+        for(var i=0; i<sdkRoot.children.length; i++){
+          var c = sdkRoot.children[i];
+          if(c.id !== 'initLoading' && c.id !== 'sdk-error' && c.offsetHeight > 0){
+            visibleChildren++;
+          }
+        }
+        console.log('[Mira] 5秒检查 - sdkDom:', sdkDom, '可见子元素数:', visibleChildren);
+        if(initLoading.style.display !== 'none' && visibleChildren > 0){
+          hideLoading();
+        }
+      }, 5000);
+
+      // 1秒后先隐藏loading（即使onShow没触发，让用户看到界面）
       setTimeout(function(){
         if(initLoading.style.display !== 'none'){
-          initLoading.style.display = 'none';
+          console.log('[Mira] 1秒安全超时，强制隐藏loading');
+          hideLoading();
         }
-      }, 3000);
+      }, 1000);
 
     }catch(e){
-      console.error('SDK init error:', e);
-      initLoading.innerHTML = '初始化失败，请刷新重试';
+      console.error('[Mira] SDK init error:', e);
+      showError('初始化失败：' + e.message + '<br>请刷新重试');
     }
   }
 
@@ -309,7 +333,10 @@ input{font-family:inherit;outline:none;border:none}
     setTimeout(function(){
       opening.style.display = 'none';
       app.classList.add('show');
-      initSDK(name);
+      // 确保 app 已渲染后再初始化 SDK
+      requestAnimationFrame(function(){
+        initSDK(name);
+      });
     }, 550);
   }
 
