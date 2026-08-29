@@ -39,6 +39,12 @@ input,textarea{font-family:inherit;outline:none;border:none}
 .btn-start:disabled{opacity:.5;box-shadow:none}
 .opening-foot{position:absolute;bottom:max(28px,env(safe-area-inset-bottom));font-size:11px;color:var(--ink-3);letter-spacing:1.5px}
 
+/* ========== Anchor Screen（成长锚点热身） ========== */
+#anchor{position:fixed;inset:0;z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;background:radial-gradient(ellipse at 50% 25%,#FFFBF3 0%,var(--paper) 45%,#EDE4D4 100%);transition:opacity .6s ease,transform .6s ease}
+#anchor.show{display:flex}
+#anchor.hide{opacity:0;transform:scale(1.06);pointer-events:none}
+#anchor h1{font-family:'Songti SC','STSong','SimSun',serif;font-weight:300;color:var(--ink)}
+
 /* ========== Chat Screen ========== */
 #app{position:fixed;inset:0;display:none;flex-direction:column;background:var(--paper)}
 #app.show{display:flex}
@@ -98,6 +104,19 @@ input,textarea{font-family:inherit;outline:none;border:none}
   <p class="opening-foot">夏山启明星创造营 · AI向善工作坊</p>
 </div>
 
+<!-- Anchor（成长锚点热身页：扫码后、闯关前） -->
+<div id="anchor">
+  <div class="orb" style="width:72px;height:72px;margin-bottom:20px"></div>
+  <h1 style="font-size:30px;letter-spacing:6px;margin-bottom:16px">成长锚点</h1>
+  <p class="intro" style="margin-bottom:26px">正式照镜子前，先留下一个词。<br>结营时，我会把它还给你。</p>
+  <p style="font-size:16px;color:var(--ink-2);margin-bottom:8px;text-align:center;line-height:1.9">AI 永远不能替代我的是</p>
+  <div class="field" style="margin-bottom:26px">
+    <input type="text" id="anchorInput" placeholder="一个词，比如：创造力" maxlength="20" autocomplete="off" autocorrect="off">
+  </div>
+  <button class="btn-start" id="anchorBtn">收 好，开 始 照 镜 子</button>
+  <p class="opening-foot">夏山启明星创造营 · AI向善工作坊</p>
+</div>
+
 <!-- Chat -->
 <div id="app">
   <div class="topbar">
@@ -107,9 +126,9 @@ input,textarea{font-family:inherit;outline:none;border:none}
   </div>
   <div class="msgs" id="msgs"></div>
   <div class="chips" id="chips">
+    <button class="chip" data-q="我想进入Dora的AI向善工作坊场景">🌱 AI向善</button>
     <button class="chip" data-q="我们组想请你帮我们补方案盲区。你先问问我们方案的情况，我们一个个回答，然后你可以从不同视角给我们反馈。比如家长、孩子、运营者">🔍 补盲区</button>
     <button class="chip" data-q="我们马上要路演了，想请你当模拟评委。你先了解一下我们的方案，然后问我们那些还没问过自己的问题。">🎤 路演演练</button>
-    <button class="chip" data-q="我想进入Dora的AI向善工作坊场景">🌱 AI向善</button>
   </div>
   <div class="composer">
     <form id="chatForm">
@@ -128,7 +147,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
   var API = 'https://api.coze.cn';
   var MIRA_HOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/e9e95e6e-c5ae-4c29-af9d-469e91a1fba4';
 
-  var PROLOGUE = '**👋你好{name}，我是Mira。我是一面镜子，帮你看见你可能没察觉的自己。**\n\n听说夏山的教官常说"去野，去长大"。今天我也想陪你野一点，照照镜子。\n\n你可以和我聊你在想什么，也可以把你们组的方案给我看——我会帮你们看到还没想到的角度。路演的时候，我也会问你们一些问题。我不会评判你，也不会替你做决定。我只是帮你看见。\n\n**你想从哪里开始？**';
+  var PROLOGUE = '**👋你好{name}，我是Mira。我是一面镜子，帮你看见你可能没察觉的自己。**\n\n听说夏山的教官常说"去野，去长大"。今天我也想陪你野一点，照照镜子。\n\n🔒 你的成长锚点我已经收好了——「**{anchor}**」。结营时，我会把它还给你。\n\n现在点下方「🌱 AI向善」，我们正式开始。你也可以随时和我聊你在想什么，或者把你们组的方案拿给我看——我不会评判你，也不会替你做决定，我只是帮你看见。';
 
   // ===== 设备级身份（每台手机独立，互不可见）=====
   var uid = localStorage.getItem('mira_uid');
@@ -138,9 +157,12 @@ input,textarea{font-family:inherit;outline:none;border:none}
   }
 
   var opening = document.getElementById('opening');
+  var anchor = document.getElementById('anchor');
   var app = document.getElementById('app');
   var nameInput = document.getElementById('nameInput');
   var startBtn = document.getElementById('startBtn');
+  var anchorInput = document.getElementById('anchorInput');
+  var anchorBtn = document.getElementById('anchorBtn');
   var msgsEl = document.getElementById('msgs');
   var chatForm = document.getElementById('chatForm');
   var chatInput = document.getElementById('chatInput');
@@ -148,8 +170,10 @@ input,textarea{font-family:inherit;outline:none;border:none}
   var chips = document.querySelectorAll('.chip');
 
   var name = localStorage.getItem('mira_name') || '';
+  var anchorWord = localStorage.getItem('mira_anchor') || '';
   var convId = localStorage.getItem('mira_conv_id') || null;
   var messages = [];   // {role:'bot'|'user', content, failed}
+  var anchorInjected = false;
   var busy = false;
   var started = false;
   var reported = {};
@@ -272,12 +296,19 @@ input,textarea{font-family:inherit;outline:none;border:none}
     var typingMsg = {role:'bot', content:'', typing:true};
     var typingEl = renderMsg(typingMsg);
 
+    // 首条消息：把成长锚点追加在消息末尾带给 Mira（仅接口层，界面气泡仍显示学员原文）
+    var sendText = text;
+    if(!anchorInjected && anchorWord){
+      anchorInjected = true;
+      sendText = text + '（另外：我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词。）';
+    }
+    var addMsgs = [{role:'user', content:sendText, content_type:'text'}];
     var body = {
       bot_id: BOT_ID,
       user_id: uid,
       stream: false,
       auto_save_history: true,
-      additional_messages: [{role:'user', content:text, content_type:'text'}]
+      additional_messages: addMsgs
     };
     if(convId){ body.conversation_id = convId; }
 
@@ -351,22 +382,33 @@ input,textarea{font-family:inherit;outline:none;border:none}
     });
   }
 
-  // ===== 开始 =====
+  // ===== 开始：姓名 → 成长锚点热身 → 聊天 =====
   function enterChat(){
     if(started) return;
     started = true;
-    opening.classList.add('hide');
+    anchor.classList.add('hide');
     setTimeout(function(){
-      opening.style.display = 'none';
+      anchor.style.display = 'none';
       app.classList.add('show');
       loadHistory();
       if(messages.length === 0){
-        var p = {role:'bot', content: PROLOGUE.replace('{name}', name)};
+        var p = {role:'bot', content: PROLOGUE.replace('{name}', name).replace('{anchor}', anchorWord || '___')};
         messages.push(p);
         renderMsg(p);
         persist();
       }
       setTimeout(function(){ chatInput.focus(); }, 300);
+    }, 550);
+  }
+
+  function showAnchor(){
+    opening.classList.add('hide');
+    setTimeout(function(){
+      opening.style.display = 'none';
+      anchor.style.display = 'flex';
+      anchor.classList.add('show');
+      if(anchorWord) anchorInput.value = anchorWord;
+      setTimeout(function(){ anchorInput.focus(); }, 600);
     }, 550);
   }
 
@@ -377,12 +419,27 @@ input,textarea{font-family:inherit;outline:none;border:none}
     localStorage.setItem('mira_name', name);
     startBtn.disabled = true;
     startBtn.textContent = '正 在 进 入…';
+    // 已填过锚点的回访学员：直接进聊天
+    if(anchorWord){ enterChat(); } else { showAnchor(); }
+  }
+
+  function anchorSubmit(){
+    var v = anchorInput.value.trim();
+    if(!v){ anchorInput.focus(); anchorInput.style.borderColor = '#E8A87C'; return; }
+    anchorWord = v;
+    localStorage.setItem('mira_anchor', anchorWord);
+    anchorBtn.disabled = true;
+    anchorBtn.textContent = '正 在 照 镜 子…';
     enterChat();
   }
 
   startBtn.addEventListener('click', start);
   nameInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); start(); }
+  });
+  anchorBtn.addEventListener('click', anchorSubmit);
+  anchorInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); anchorSubmit(); }
   });
 
   chatForm.addEventListener('submit', function(e){
