@@ -167,7 +167,7 @@ input{font-family:inherit;outline:none;border:none}
   // 消息全量永久保存在 Coze 后台（官方存储），这里只上报「姓名↔conversation_id」到飞书归档群，
   // 营队后凭 conv_id 调 Coze 官方消息 API 批量拉全量对话导出成长报告底稿。
   // MIRA_HOOK 为飞书群自定义机器人 webhook（开营前由配置填入；留空则静默跳过，不影响任何功能）
-  var MIRA_HOOK = '';
+  var MIRA_HOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/e9e95e6e-c5ae-4c29-af9d-469e91a1fba4';
   var REG = { convId:null, done:false };
   (function installConvHook(){
     function grab(u){ if(typeof u==='string' && !REG.convId){ var m=u.match(/conversation_id=(\d{10,})/); if(m) REG.convId=m[1]; } }
