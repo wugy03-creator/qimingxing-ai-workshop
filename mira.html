@@ -142,6 +142,13 @@ input,textarea{font-family:inherit;outline:none;border:none}
 (function(){
   'use strict';
 
+  // 一键重置：URL 带 ?reset=1 时清空本机全部 Mira 数据，回到新机状态（用于测试/换人）
+  if (/[?&]reset=1\b/.test(location.search)) {
+    ['mira_uid','mira_name','mira_anchor','mira_conv_id','mira_msgs','mira_reg_convs'].forEach(function(k){ localStorage.removeItem(k); });
+    history.replaceState(null, '', location.pathname);
+    location.reload();
+  }
+
   var BOT_ID = '7678287170393735203';
   var PAT = 'pat_M3lmELwIxbXFeM5LwLySJnhB7It0v0itfQfQZGmsaBCf7lrp8guynkaL5G8b06Vh';
   var API = 'https://api.coze.cn';
