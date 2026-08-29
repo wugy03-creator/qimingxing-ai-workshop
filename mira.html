@@ -109,6 +109,7 @@ input{font-family:inherit;outline:none;border:none}
   // 选择器均来自实测 DOM（SDK 1.2.0-beta.20 cn，无 Shadow DOM）
   var MIRA_CSS = 'header button.coze-chat-sdk-semi-button{display:none !important;}'   /* ➕新建会话：header 内唯一按钮 */
     + '.efa8c49d8ce1a57573bf{display:none !important;}'                               /* ✕关闭：SDK 哈希类，版本锁定后稳定 */
+    + 'button[data-testid="bot-edit-debug-chat-clear-button"]{display:none !important;}' /* 🧹左下角清除上下文：防手滑失忆（会话ID不变但上下文被清空） */
     + 'img[alt="icon"]{display:none !important;}';                                    /* 快捷指令破损默认图标，保留文字与头像 */
   function injectMiraCss(root){
     try{
@@ -152,6 +153,13 @@ input{font-family:inherit;outline:none;border:none}
           im.style.display = 'none';
         }
       }
+      // 🧹左下角「清除上下文」按钮：连外层 .coz-icon-button 包裹一起隐藏，防学员手滑清空记忆
+      var clearBtns = document.body.querySelectorAll('button[data-testid="bot-edit-debug-chat-clear-button"]');
+      for(var c=0;c<clearBtns.length;c++){
+        clearBtns[c].style.display = 'none';
+        var wrap = clearBtns[c].closest('.coz-icon-button');
+        if(wrap) wrap.style.display = 'none';
+      }
     }catch(e){}
   }
   function startIconHide(){
@@ -168,27 +176,34 @@ input{font-family:inherit;outline:none;border:none}
   // 营队后凭 conv_id 调 Coze 官方消息 API 批量拉全量对话导出成长报告底稿。
   // MIRA_HOOK 为飞书群自定义机器人 webhook（开营前由配置填入；留空则静默跳过，不影响任何功能）
   var MIRA_HOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/e9e95e6e-c5ae-4c29-af9d-469e91a1fba4';
-  var REG = { convId:null, done:false };
+  var REG = { convId:null };
+  var REPORTED = {};
+  try{ REPORTED = JSON.parse(localStorage.getItem('mira_reg_convs') || '{}') || {}; }catch(e){ REPORTED = {}; }
   (function installConvHook(){
-    function grab(u){ if(typeof u==='string' && !REG.convId){ var m=u.match(/conversation_id=(\d{10,})/); if(m) REG.convId=m[1]; } }
+    // 总是更新为最新 conv_id：学员若点了「新会话/清除上下文」，新会话 ID 也要被抓到登记
+    function grab(u){ if(typeof u==='string'){ var m=u.match(/conversation_id=(\d{10,})/); if(m) REG.convId=m[1]; } }
     var of = window.fetch;
     if(of){ window.fetch = function(){ try{ grab(arguments[0] && arguments[0].url ? arguments[0].url : arguments[0]); }catch(e){} return of.apply(this, arguments); }; }
     var oo = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(m,u){ try{ grab(u); }catch(e){} return oo.apply(this, arguments); };
   })();
   function registerTick(){
-    if(!MIRA_HOOK || REG.done || !REG.convId) return;
+    if(!MIRA_HOOK || !REG.convId) return;
     var name = localStorage.getItem('mira_name');
-    if(!name) return;
-    if(localStorage.getItem('mira_reg_conv') === REG.convId){ REG.done = true; return; }
-    REG.done = true;
+    if(!name || REPORTED[REG.convId]) return;
+    var cid = REG.convId;
+    REPORTED[cid] = 1;
     try{
-      var text = '🪞 Mira 入营登记\n姓名：'+name+'\n会话：'+REG.convId+'\n时间：'+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
+      var n = Object.keys(REPORTED).length;
+      var sid = (localStorage.getItem('mira_uid') || '').slice(-6);
+      var text = '🪞 Mira 入营登记\n姓名：'+name+'\n学员ID：'+sid+'\n会话：'+cid+
+        (n>1 ? '\n备注：该学员发生过会话切换（第'+n+'个会话，可能误点了新会话），导出时请合并' : '')+
+        '\n时间：'+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
       fetch(MIRA_HOOK, {method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({msg_type:'text', content:{text:text}})})
-        .then(function(){ localStorage.setItem('mira_reg_conv', REG.convId); })
-        .catch(function(){ REG.done = false; });
-    }catch(e){ REG.done = false; }
+        .then(function(){ localStorage.setItem('mira_reg_convs', JSON.stringify(REPORTED)); })
+        .catch(function(){ delete REPORTED[cid]; });
+    }catch(e){ delete REPORTED[cid]; }
   }
   function startArchive(){
     setInterval(registerTick, 3000);
