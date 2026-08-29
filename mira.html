@@ -170,6 +170,20 @@ input,textarea{font-family:inherit;outline:none;border:none}
     t = t.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>').replace(/<\/ul>\s*<ul>/g,'');
     return t;
   }
+  // 模型偶发「整段复读」兜底：若回复为 X+X（块长≥80字）自动截断为一段
+  function dedupReply(t){
+    if(!t || t.length < 160) return t;
+    var s = t.trim();
+    var L = s.length;
+    for(var k = Math.floor(L/2); k >= 80; k--){
+      var a = s.slice(0, k).trim();
+      var b = s.slice(k, k + a.length + 4).trim().slice(0, a.length);
+      if(a.length >= 80 && a === b){
+        return s.slice(0, k).trim();
+      }
+    }
+    return t;
+  }
   function scrollBottom(){ msgsEl.scrollTop = msgsEl.scrollHeight; }
   function avatarChar(){ return name ? name.charAt(0) : '我'; }
 
@@ -181,7 +195,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
     if(m.role === 'user') av.textContent = avatarChar();
     var bub = document.createElement('div');
     bub.className = 'bubble';
-    bub.innerHTML = m.typing ? '<span class="typing"><i></i><i></i><i></i></span>' : md(m.content);
+    bub.innerHTML = m.typing ? '<span class="typing"><i></i><i></i><i></i></span>' : md(m.role === 'bot' ? dedupReply(m.content) : m.content);
     div.appendChild(av);
     div.appendChild(bub);
     if(m.failed){
