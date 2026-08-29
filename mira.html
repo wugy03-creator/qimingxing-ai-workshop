@@ -300,7 +300,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
     var sendText = text;
     if(!anchorInjected && anchorWord){
       anchorInjected = true;
-      sendText = text + '（另外：我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词。）';
+      sendText = text + '（另外：我叫' + name + '，我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词，也不用再问我叫什么。）';
     }
     var addMsgs = [{role:'user', content:sendText, content_type:'text'}];
     var body = {
