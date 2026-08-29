@@ -387,8 +387,10 @@ input,textarea{font-family:inherit;outline:none;border:none}
     if(started) return;
     started = true;
     anchor.classList.add('hide');
+    opening.classList.add('hide');
     setTimeout(function(){
       anchor.style.display = 'none';
+      opening.style.display = 'none';
       app.classList.add('show');
       loadHistory();
       if(messages.length === 0){
@@ -419,6 +421,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
     localStorage.setItem('mira_name', name);
     startBtn.disabled = true;
     startBtn.textContent = '正 在 进 入…';
+    opening.classList.add('hide');
     // 已填过锚点的回访学员：直接进聊天
     if(anchorWord){ enterChat(); } else { showAnchor(); }
   }
