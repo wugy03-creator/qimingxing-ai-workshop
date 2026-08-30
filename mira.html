@@ -87,6 +87,18 @@ input,textarea{font-family:inherit;outline:none;border:none}
 .send-btn{flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--amber-2));color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(200,98,43,.25);transition:transform .12s,opacity .2s}
 .send-btn:active{transform:scale(.92)}
 .send-btn:disabled{opacity:.45;box-shadow:none}
+.attach-btn{flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:var(--cream);border:1px solid rgba(200,98,43,.3);color:var(--amber);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+.attach-btn:active{transform:scale(.92)}
+.attach-bar{display:none;flex-wrap:wrap;gap:6px;padding:0 2px 8px}
+.attach-bar.has{display:flex}
+.attach-item{display:flex;align-items:center;gap:6px;max-width:100%;padding:6px 10px;border-radius:14px;background:var(--cream);border:1px solid rgba(200,98,43,.25);font-size:12px;color:var(--ink-2)}
+.attach-item img{width:30px;height:30px;object-fit:cover;border-radius:6px;flex:0 0 auto}
+.attach-item .a-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.attach-item .a-status{color:var(--ink-3);font-size:11px;white-space:nowrap}
+.attach-item .a-x{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:none;background:rgba(200,98,43,.15);color:var(--amber);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.msg-attach{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
+.msg-attach .a-file{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:12px;background:rgba(255,255,255,.55);font-size:12px;color:inherit}
+.msg-attach img{max-width:180px;max-height:180px;border-radius:10px;border:1px solid rgba(0,0,0,.08);display:block}
 </style>
 </head>
 <body>
@@ -131,13 +143,21 @@ input,textarea{font-family:inherit;outline:none;border:none}
     <button class="chip" data-q="我想进入Dora的AI向善工作坊场景">🌱 AI向善</button>
   </div>
   <div class="composer">
+    <div class="attach-bar" id="attachBar"></div>
     <form id="chatForm">
-      <textarea id="chatInput" rows="1" placeholder="和 Mira 说点什么…"></textarea>
+      <button type="button" class="attach-btn" id="attachBtn" aria-label="添加附件">＋</button>
+      <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.txt,.md,.ppt,.pptx,.xls,.xlsx,.csv" multiple style="display:none">
+      <textarea id="chatInput" rows="1" placeholder="和 Mira 说点什么，也可以发方案图片/文档…"></textarea>
       <button type="submit" class="send-btn" id="sendBtn" aria-label="发送">↑</button>
     </form>
   </div>
 </div>
 
+<script src="lib/jszip.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script>
+if(window['pdfjsLib']){ pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js'; }
+</script>
 <script>
 (function(){
   'use strict';
@@ -174,6 +194,9 @@ input,textarea{font-family:inherit;outline:none;border:none}
   var chatForm = document.getElementById('chatForm');
   var chatInput = document.getElementById('chatInput');
   var sendBtn = document.getElementById('sendBtn');
+  var attachBtn = document.getElementById('attachBtn');
+  var fileInput = document.getElementById('fileInput');
+  var attachBar = document.getElementById('attachBar');
   var chips = document.querySelectorAll('.chip');
 
   var name = localStorage.getItem('mira_name') || '';
@@ -182,6 +205,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
   var messages = [];   // {role:'bot'|'user', content, failed}
   var anchorInjected = false;
   var busy = false;
+  var pendingAtts = []; // 待发送附件 {file,name,isImage,status,thumb,fileId,docText,error}
   var started = false;
   var reported = {};
   try{ reported = JSON.parse(localStorage.getItem('mira_reg_convs') || '{}') || {}; }catch(e){ reported = {}; }
@@ -227,6 +251,24 @@ input,textarea{font-family:inherit;outline:none;border:none}
     var bub = document.createElement('div');
     bub.className = 'bubble';
     bub.innerHTML = m.typing ? '<span class="typing"><i></i><i></i><i></i></span>' : md(m.role === 'bot' ? dedupReply(m.content) : m.content);
+    if(m.attachments && m.attachments.length){
+      var ma = document.createElement('div');
+      ma.className = 'msg-attach';
+      m.attachments.forEach(function(at){
+        if(at.isImage && at.thumb){
+          var im = document.createElement('img');
+          im.src = at.thumb;
+          im.alt = at.name;
+          ma.appendChild(im);
+        }else{
+          var chip = document.createElement('span');
+          chip.className = 'a-file';
+          chip.textContent = (at.isImage ? '🖼️ ' : '📄 ') + at.name;
+          ma.appendChild(chip);
+        }
+      });
+      bub.appendChild(ma);
+    }
     div.appendChild(av);
     div.appendChild(bub);
     if(m.failed){
@@ -238,7 +280,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
         var lastUser = null;
         for(var i=messages.length-1;i>=0;i--){ if(messages[i].role==='user' && messages[i].failed){ lastUser = messages[i]; break; } }
         if(lastUser){ lastUser.failed = false; }
-        sendMessage(m.retryText || '', true, m.retryHidden);
+        sendMessage(m.retryText || '', true, m.retryHidden, m.retryAtts || null);
       });
       bub.appendChild(tip);
     }
@@ -282,19 +324,27 @@ input,textarea{font-family:inherit;outline:none;border:none}
     }).then(function(r){ return r.json().then(function(j){ return {ok:r.ok, json:j}; }); });
   }
 
-  function sendMessage(text, isRetry, hiddenText){
+  function sendMessage(text, isRetry, hiddenText, atts){
     text = (text || '').trim();
-    if(!text || busy) return;
+    atts = atts || [];
+    if(busy) return;
+    if(!text && !atts.length) return;
     busy = true;
     sendBtn.disabled = true;
+    attachBtn.disabled = true;
     chips.forEach(function(c){ c.disabled = true; });
+
+    // 附件快照（只保存渲染/重试需要的轻量字段，不含 File 对象）
+    var attSnap = atts.map(function(at){
+      return { name:at.name, isImage:!!at.isImage, thumb:at.thumb||null };
+    });
 
     var userMsg;
     if(isRetry){
       // 重试：最后一条 user 消息已在界面上，只补 typing
       userMsg = null;
     }else{
-      userMsg = {role:'user', content:text};
+      userMsg = {role:'user', content:text, attachments: attSnap.length ? attSnap : undefined};
       messages.push(userMsg);
       renderMsg(userMsg);
       persist();
@@ -310,7 +360,30 @@ input,textarea{font-family:inherit;outline:none;border:none}
       anchorInjected = true;
       sendText = sendText + '（另外：我叫' + name + '，我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词，也不用再问我叫什么。）';
     }
-    var addMsgs = [{role:'user', content:sendText, content_type:'text'}];
+
+    // 组装文档文字（本地已提取，直接拼进消息，不依赖 Coze 解析）
+    var docParts = [];
+    atts.forEach(function(at){
+      if(!at.isImage && at.docText){
+        docParts.push('【附件文档《' + at.name + '》内容如下，请直接阅读并分析】\n' + at.docText);
+      }
+    });
+    if(docParts.length){ sendText = sendText + (sendText ? '\n\n' : '') + docParts.join('\n\n'); }
+
+    // 图片：走多模态 object_string（仅本次发送有效的 fileId；重试时 fileId 已失效则跳过并提示）
+    var imgAtts = atts.filter(function(at){ return at.isImage && at.fileId; });
+    var imgLost = atts.filter(function(at){ return at.isImage && !at.fileId; });
+    if(imgLost.length){
+      sendText = sendText + '\n\n（注：刚才有' + imgLost.length + '张图片发送失败，请重新发一次图片。）';
+    }
+    var addMsgs;
+    if(imgAtts.length){
+      var parts = [{type:'text', text: sendText || '我发了' + imgAtts.length + '张方案图片，请查看并分析。'}];
+      imgAtts.forEach(function(at){ parts.push({type:'image', file_id: at.fileId}); });
+      addMsgs = [{role:'user', content: JSON.stringify(parts), content_type:'object_string'}];
+    }else{
+      addMsgs = [{role:'user', content:sendText, content_type:'text'}];
+    }
     var body = {
       bot_id: BOT_ID,
       user_id: uid,
@@ -336,11 +409,13 @@ input,textarea{font-family:inherit;outline:none;border:none}
       messages.push(botMsg);
       renderMsg(botMsg);
       persist();
+      pendingAtts = [];
+      renderAttachBar();
       finishBusy();
     }).catch(function(err){
       typingEl.remove();
       if(userMsg) userMsg.failed = true;
-      var failMsg = {role:'bot', content:'刚才没听清，能再说一次吗？（网络不太稳）', failed:true, retryText:text, retryHidden: hiddenText || null};
+      var failMsg = {role:'bot', content:'刚才没发出去，网络不太稳，点下方重试～', failed:true, retryText:text, retryHidden: hiddenText || null, retryAtts: atts};
       messages.push(failMsg);
       renderMsg(failMsg);
       persist();
@@ -351,8 +426,145 @@ input,textarea{font-family:inherit;outline:none;border:none}
   function finishBusy(){
     busy = false;
     sendBtn.disabled = false;
+    attachBtn.disabled = false;
     chips.forEach(function(c){ c.disabled = false; });
     chatInput.focus();
+  }
+
+  // ===== 附件（方案图片/文档）=====
+  var IMG_EXT = /\.(png|jpe?g|gif|webp|bmp)$/i;
+  function isImageFile(f){ return (f.type && f.type.indexOf('image/')===0) || IMG_EXT.test(f.name); }
+
+  function renderAttachBar(){
+    attachBar.innerHTML = '';
+    if(!pendingAtts.length){ attachBar.classList.remove('has'); return; }
+    attachBar.classList.add('has');
+    pendingAtts.forEach(function(at, idx){
+      var item = document.createElement('div');
+      item.className = 'attach-item';
+      if(at.isImage && at.thumb){
+        var im = document.createElement('img'); im.src = at.thumb; item.appendChild(im);
+      }else{
+        var ico = document.createElement('span'); ico.textContent = at.isImage ? '🖼️' : '📄'; item.appendChild(ico);
+      }
+      var nm = document.createElement('span'); nm.className = 'a-name'; nm.textContent = at.name; item.appendChild(nm);
+      var st = document.createElement('span'); st.className = 'a-status';
+      st.textContent = at.error ? ('⚠️ ' + at.error) : (at.status === 'ready' ? '✓' : '读取中…');
+      st.style.color = at.error ? '#c8622b' : '';
+      item.appendChild(st);
+      var x = document.createElement('button'); x.type='button'; x.className='a-x'; x.textContent='×';
+      x.addEventListener('click', function(){ pendingAtts.splice(idx,1); renderAttachBar(); });
+      item.appendChild(x);
+      attachBar.appendChild(item);
+    });
+  }
+
+  function makeThumb(file){
+    return new Promise(function(res){
+      if(!isImageFile(file)) return res(null);
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function(){
+        try{
+          var scale = Math.min(1, 200/Math.max(img.width, img.height));
+          var cv = document.createElement('canvas');
+          cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          URL.revokeObjectURL(url);
+          res(cv.toDataURL('image/jpeg', 0.7));
+        }catch(e){ URL.revokeObjectURL(url); res(null); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); res(null); };
+      img.src = url;
+    });
+  }
+
+  // 上传图片到 Coze，返回 file_id
+  function uploadImage(file){
+    return new Promise(function(resolve, reject){
+      var fd = new FormData();
+      fd.append('purpose', 'file_parse');
+      fd.append('file', file, file.name);
+      fetch(API + '/v1/files/upload', { method:'POST', headers:{ 'Authorization':'Bearer '+PAT }, body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(j && j.code === 0 && j.data && j.data.id) resolve(j.data.id);
+          else reject(new Error((j && j.msg) || 'upload failed'));
+        })
+        .catch(reject);
+    });
+  }
+
+  // 文档本地提取文字（txt/md/csv 直接读；docx/pptx/xlsx 用 JSZip 解 XML；pdf 用 pdf.js）
+  function extractDocText(file){
+    var name = file.name || '';
+    var ext = name.split('.').pop().toLowerCase();
+    if(['txt','md','csv'].indexOf(ext) >= 0){
+      return file.text().then(function(t){ return t.slice(0, 6000); });
+    }
+    if(ext === 'pdf'){
+      if(!window['pdfjsLib']) return Promise.reject(new Error('PDF组件未加载'));
+      return file.arrayBuffer().then(function(buf){
+        return pdfjsLib.getDocument({data: buf}).promise.then(function(pdf){
+          var max = Math.min(pdf.numPages, 15);
+          var jobs = [];
+          for(var i=1;i<=max;i++){ jobs.push(pdf.getPage(i).then(function(pg){ return pg.getTextContent(); })); }
+          return Promise.all(jobs).then(function(contents){
+            var txt = contents.map(function(tc){
+              return tc.items.map(function(it){ return it.str; }).join(' ');
+            }).join('\n');
+            return txt.replace(/[ \t]{2,}/g,' ').slice(0, 6000);
+          });
+        });
+      });
+    }
+    if(['docx','pptx','xlsx'].indexOf(ext) >= 0){
+      if(!window['JSZip']) return Promise.reject(new Error('文档组件未加载'));
+      return file.arrayBuffer().then(function(buf){
+        return JSZip.loadAsync(buf).then(function(zip){
+          var reXml = ext === 'pptx' ? /ppt\/slides\/slide\d+\.xml$/ :
+                      ext === 'xlsx' ? /xl\/sharedStrings\.xml$/ : /word\/document\.xml$/;
+          var names = Object.keys(zip.files).filter(function(n){ return reXml.test(n); }).sort();
+          if(!names.length) return '';
+          return Promise.all(names.map(function(n){ return zip.files[n].async('string'); })).then(function(xmls){
+            var texts = xmls.map(function(x){
+              return (x.match(/<a:t>([\s\S]*?)<\/a:t>|<w:t[^>]*>([\s\S]*?)<\/w:t>|<t[^>]*>([\s\S]*?)<\/t>/g) || [])
+                .map(function(s){ return s.replace(/<[^>]+>/g,''); }).join(' ');
+            });
+            return texts.join('\n').replace(/\s{2,}/g,' ').slice(0, 6000);
+          });
+        });
+      });
+    }
+    // doc/ppt/xls 等旧二进制格式：明确提示
+    return Promise.reject(new Error('旧版Office格式不支持，请另存为PDF或新版格式'));
+  }
+
+  function addFiles(fileList){
+    var files = Array.prototype.slice.call(fileList || []);
+    files.forEach(function(f){
+      if(f.size > 25*1024*1024){ alert('文件「' + f.name + '」超过25MB，发不了，换小一点的～'); return; }
+      var at = { file:f, name:f.name, isImage:isImageFile(f), status:'reading', thumb:null, fileId:null, docText:null, error:null };
+      pendingAtts.push(at);
+      renderAttachBar();
+      var p;
+      if(at.isImage){
+        p = Promise.all([ makeThumb(f), uploadImage(f) ]).then(function(r){ at.thumb = r[0]; at.fileId = r[1]; });
+      }else{
+        p = extractDocText(f).then(function(txt){
+          at.docText = (txt && txt.trim()) ? txt : null;
+          if(!at.docText) at.error = '没提取到文字（可能是扫描件，可截图发来）';
+        });
+      }
+      p.then(function(){
+        if(!at.error) at.status = 'ready';
+        renderAttachBar();
+      }).catch(function(err){
+        at.error = (err && err.message) ? err.message : '读取失败';
+        renderAttachBar();
+      });
+    });
+    fileInput.value = '';
   }
 
   function pollAnswer(cid, chatId){
@@ -456,20 +668,40 @@ input,textarea{font-family:inherit;outline:none;border:none}
   chatForm.addEventListener('submit', function(e){
     e.preventDefault();
     var t = chatInput.value;
+    var notReady = pendingAtts.filter(function(at){ return at.status !== 'ready' || at.error; });
+    if(notReady.length){
+      var errs = pendingAtts.filter(function(at){ return at.error; });
+      if(errs.length){
+        alert('有文件没读取成功：' + errs.map(function(a){ return a.name; }).join('、') + '\n请点文件旁的 × 删掉，或换成图片/PDF再发。');
+      }else{
+        alert('附件还在读取中，稍等一秒再发～');
+      }
+      return;
+    }
+    if(!t.trim() && !pendingAtts.length) return;
+    var attsToSend = pendingAtts.slice();
+    pendingAtts = [];
+    renderAttachBar();
     chatInput.value = '';
     chatInput.style.height = 'auto';
-    sendMessage(t, false);
+    sendMessage(t, false, null, attsToSend);
   });
   chatInput.addEventListener('input', function(){
     chatInput.style.height = 'auto';
     chatInput.style.height = Math.min(chatInput.scrollHeight, 96) + 'px';
   });
 
+  // 附件按钮
+  attachBtn.addEventListener('click', function(){ if(!busy) fileInput.click(); });
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files && fileInput.files.length) addFiles(fileInput.files);
+  });
+
   chips.forEach(function(c){
     c.addEventListener('click', function(){
       if(busy) return;
       var hidden = c.getAttribute('data-hidden');
-      sendMessage(c.getAttribute('data-q'), false, hidden || null);
+      sendMessage(c.getAttribute('data-q'), false, hidden || null, []);
     });
   });
 
