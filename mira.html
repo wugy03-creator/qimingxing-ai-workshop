@@ -126,7 +126,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
   </div>
   <div class="msgs" id="msgs"></div>
   <div class="chips" id="chips">
-    <button class="chip" data-q="【Day2正式路演评审任务】我是评委团的老师。注意：这不是路演前演练，路演已经正式结束，现在你是评委团的AI评委，对小组做正式评审。我会把每一组的路演内容发给你，你直接输出完整评审结论——不要向我提问，不要让小组回答问题，不要扮演家长/孩子/运营者和我对话，不要等我回复，一次性把评审写完。严格按以下四个标题输出，一个都不能少：🌟亮点：1-2个真正动人、真正不一样的地方，具体说出打动你的点；🔍盲区与风险：1-2个最需要再想清楚的问题，直接写出你的判断（目标用户理解是否真实？能落地吗？安全/成本/师资/天气？孩子是真成长还是只是好玩？团队每个人都参与了吗？），不要写成反问句；💡一条落地建议：只给一条，最值得现在就改的那件事；💬一句话总评：送给这个小组的镜子式点评，真诚、具体、有力量。规则：不打分、不排名、不比较各组高低；整段350字以内；如果信息不足以评审，直接说缺什么，不要编造。收到这条消息只回复：「已就绪，请发第一组的路演内容。」">🎤 路演评审</button>
+    <button class="chip" data-q="老师好，我们组路演完了，想请你正式评审一下我们的方案。" data-hidden="【Day2正式路演评审任务】我是评委团的老师。注意：这不是路演前演练，路演已经正式结束，现在你是评委团的AI评委，对小组做正式评审。我会把每一组的路演内容发给你，你直接输出完整评审结论——不要向我提问，不要让小组回答问题，不要扮演家长/孩子/运营者和我对话，不要等我回复，一次性把评审写完。严格按以下四个标题输出，一个都不能少：🌟亮点：1-2个真正动人、真正不一样的地方，具体说出打动你的点；🔍盲区与风险：1-2个最需要再想清楚的问题，直接写出你的判断（目标用户理解是否真实？能落地吗？安全/成本/师资/天气？孩子是真成长还是只是好玩？团队每个人都参与了吗？），不要写成反问句；💡一条落地建议：只给一条，最值得现在就改的那件事；💬一句话总评：送给这个小组的镜子式点评，真诚、具体、有力量。规则：不打分、不排名、不比较各组高低；整段350字以内；如果信息不足以评审，直接说缺什么，不要编造。收到这条消息只回复：「已就绪，请发第一组的路演内容。」">🎤 路演评审</button>
     <button class="chip" data-q="我们组想请你帮我们补方案盲区。你先问问我们方案的情况，我们一个个回答，然后你可以从不同视角给我们反馈。比如家长、孩子、运营者">🔍 补盲区</button>
     <button class="chip" data-q="我想进入Dora的AI向善工作坊场景">🌱 AI向善</button>
   </div>
@@ -238,7 +238,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
         var lastUser = null;
         for(var i=messages.length-1;i>=0;i--){ if(messages[i].role==='user' && messages[i].failed){ lastUser = messages[i]; break; } }
         if(lastUser){ lastUser.failed = false; }
-        sendMessage(m.retryText || '', true);
+        sendMessage(m.retryText || '', true, m.retryHidden);
       });
       bub.appendChild(tip);
     }
@@ -282,7 +282,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
     }).then(function(r){ return r.json().then(function(j){ return {ok:r.ok, json:j}; }); });
   }
 
-  function sendMessage(text, isRetry){
+  function sendMessage(text, isRetry, hiddenText){
     text = (text || '').trim();
     if(!text || busy) return;
     busy = true;
@@ -303,11 +303,12 @@ input,textarea{font-family:inherit;outline:none;border:none}
     var typingMsg = {role:'bot', content:'', typing:true};
     var typingEl = renderMsg(typingMsg);
 
+    // 实际发给模型的文本：若有 hiddenText（快捷指令后台话术），用它代替界面显示的气泡内容
+    var sendText = hiddenText ? String(hiddenText) : text;
     // 首条消息：把成长锚点追加在消息末尾带给 Mira（仅接口层，界面气泡仍显示学员原文）
-    var sendText = text;
     if(!anchorInjected && anchorWord){
       anchorInjected = true;
-      sendText = text + '（另外：我叫' + name + '，我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词，也不用再问我叫什么。）';
+      sendText = sendText + '（另外：我叫' + name + '，我在开营热身填的成长锚点是「AI永远不能替代我的是' + anchorWord + '」，这个词请你记住、结营成长报告时还给我，现在不用再问我这个词，也不用再问我叫什么。）';
     }
     var addMsgs = [{role:'user', content:sendText, content_type:'text'}];
     var body = {
@@ -339,7 +340,7 @@ input,textarea{font-family:inherit;outline:none;border:none}
     }).catch(function(err){
       typingEl.remove();
       if(userMsg) userMsg.failed = true;
-      var failMsg = {role:'bot', content:'刚才没听清，能再说一次吗？（网络不太稳）', failed:true, retryText:text};
+      var failMsg = {role:'bot', content:'刚才没听清，能再说一次吗？（网络不太稳）', failed:true, retryText:text, retryHidden: hiddenText || null};
       messages.push(failMsg);
       renderMsg(failMsg);
       persist();
@@ -467,7 +468,8 @@ input,textarea{font-family:inherit;outline:none;border:none}
   chips.forEach(function(c){
     c.addEventListener('click', function(){
       if(busy) return;
-      sendMessage(c.getAttribute('data-q'), false);
+      var hidden = c.getAttribute('data-hidden');
+      sendMessage(c.getAttribute('data-q'), false, hidden || null);
     });
   });
 
